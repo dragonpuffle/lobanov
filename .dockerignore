@@ -1,0 +1,64 @@
+# Miscellaneous
+api
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Development and test files
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.mypy_cache/
+
+# Local environment
+.env
+.env.*
+
+# Docker specific files
+dockerfile
+.dockerignore
+docker-compose.yml
+
+# Logs
+*.log
+logs/
+
+# IDE configuration
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Cache and temporary files
+.cache/
+*.tmp
+*~
+
+# Documentation
+docs/
+*.md
+!readme.md
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
