@@ -1,5 +1,3 @@
-from datetime import UTC, datetime
-
 from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB

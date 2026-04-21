@@ -42,7 +42,9 @@ class MedicalDocumentRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_user_id(self, session: SessionT, user_id: UUID, limit: int = 100, offset: int = 0) -> list[MedicalDocument]:
+    async def get_by_user_id(
+        self, session: SessionT, user_id: UUID, limit: int = 100, offset: int = 0
+    ) -> list[MedicalDocument]:
         """Retrieve all medical documents for a specific user with pagination.
 
         Args:

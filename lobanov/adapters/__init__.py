@@ -1,4 +1,5 @@
 from . import postgres_models as postgres_models
+from . import repositories as repositories
 from .postgres_models import AudioRecord as AudioRecord
 from .postgres_models import Base as Base
 from .postgres_models import ClinicalFact as ClinicalFact
@@ -10,3 +11,10 @@ from .postgres_models import TemplateField as TemplateField
 from .postgres_models import TimestampMixin as TimestampMixin
 from .postgres_models import Transcript as Transcript
 from .postgres_models import User as User
+from .repositories import AudioRecordRepository as AudioRecordRepository
+from .repositories import ClinicalFactRepository as ClinicalFactRepository
+from .repositories import DocumentationSessionRepository as DocumentationSessionRepository
+from .repositories import MedicalDocumentRepository as MedicalDocumentRepository
+from .repositories import TemplateRepository as TemplateRepository
+from .repositories import TranscriptRepository as TranscriptRepository
+from .repositories import UserRepository as UserRepository

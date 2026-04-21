@@ -14,12 +14,12 @@ class DocumentationSessionRepositoryProtocol[SessionT](Protocol):
         raise NotImplementedError("DocumentationSessionRepositoryProtocol.context")
         yield  # pyright: ignore[reportUnreachable]
 
-    async def create(self, session: SessionT, session: DocumentationSession) -> DocumentationSession:
+    async def create(self, session: SessionT, documentation_session: DocumentationSession) -> DocumentationSession:
         """Create a new documentation session.
 
         Args:
             session: The database session.
-            session: The documentation session entity to create.
+            documentation_session: The documentation session entity to create.
 
         Returns:
             The created documentation session entity.
@@ -38,7 +38,9 @@ class DocumentationSessionRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_user_id(self, session: SessionT, user_id: UUID, limit: int = 100, offset: int = 0) -> list[DocumentationSession]:
+    async def get_by_user_id(
+        self, session: SessionT, user_id: UUID, limit: int = 100, offset: int = 0
+    ) -> list[DocumentationSession]:
         """Get all documentation sessions for a user with pagination.
 
         Args:
@@ -52,12 +54,12 @@ class DocumentationSessionRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def update(self, session: SessionT, session: DocumentationSession) -> DocumentationSession:
+    async def update(self, session: SessionT, documentation_session: DocumentationSession) -> DocumentationSession:
         """Update an existing documentation session.
 
         Args:
             session: The database session.
-            session: The documentation session entity with updated fields.
+            documentation_session: The documentation session entity with updated fields.
 
         Returns:
             The updated documentation session entity.
@@ -76,7 +78,9 @@ class DocumentationSessionRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_active_sessions(self, session: SessionT, user_id: UUID, limit: int = 100, offset: int = 0) -> list[DocumentationSession]:
+    async def get_active_sessions(
+        self, session: SessionT, user_id: UUID, limit: int = 100, offset: int = 0
+    ) -> list[DocumentationSession]:
         """Get active documentation sessions for a user (not confirmed).
 
         Args:
