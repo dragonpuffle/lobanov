@@ -12,10 +12,11 @@ class ClinicalFactRepositoryProtocol[SessionT](Protocol):
         raise NotImplementedError("ClinicalFactRepositoryProtocol.context")
         yield  # pyright: ignore[reportUnreachable]
 
-    async def create(self, clinical_fact: ClinicalFact) -> ClinicalFact:
+    async def create(self, session: SessionT, clinical_fact: ClinicalFact) -> ClinicalFact:
         """Create a new clinical fact in the repository.
 
         Args:
+            session: The database session.
             clinical_fact: The ClinicalFact entity to create.
 
         Returns:
@@ -26,10 +27,11 @@ class ClinicalFactRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_id(self, fact_id: UUID) -> ClinicalFact | None:
+    async def get_by_id(self, session: SessionT, fact_id: UUID) -> ClinicalFact | None:
         """Retrieve a clinical fact by its unique identifier.
 
         Args:
+            session: The database session.
             fact_id: The UUID of the clinical fact to retrieve.
 
         Returns:
@@ -40,10 +42,11 @@ class ClinicalFactRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_session_id(self, session_id: UUID) -> list[ClinicalFact]:
+    async def get_by_session_id(self, session: SessionT, session_id: UUID) -> list[ClinicalFact]:
         """Retrieve all clinical facts associated with a specific documentation session.
 
         Args:
+            session: The database session.
             session_id: The UUID of the documentation session.
 
         Returns:
@@ -54,10 +57,11 @@ class ClinicalFactRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_transcript_id(self, transcript_id: UUID) -> list[ClinicalFact]:
+    async def get_by_transcript_id(self, session: SessionT, transcript_id: UUID) -> list[ClinicalFact]:
         """Retrieve all clinical facts extracted from a specific transcript.
 
         Args:
+            session: The database session.
             transcript_id: The UUID of the transcript.
 
         Returns:
@@ -68,10 +72,11 @@ class ClinicalFactRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def delete(self, fact_id: UUID) -> bool:
+    async def delete(self, session: SessionT, fact_id: UUID) -> bool:
         """Delete a clinical fact by its unique identifier.
 
         Args:
+            session: The database session.
             fact_id: The UUID of the clinical fact to delete.
 
         Returns:
@@ -82,10 +87,11 @@ class ClinicalFactRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_fact_type(self, session_id: UUID, fact_type: str) -> list[ClinicalFact]:
+    async def get_by_fact_type(self, session: SessionT, session_id: UUID, fact_type: str) -> list[ClinicalFact]:
         """Retrieve clinical facts of a specific type from a session.
 
         Args:
+            session: The database session.
             session_id: The UUID of the documentation session.
             fact_type: The type of clinical fact to filter by.
 

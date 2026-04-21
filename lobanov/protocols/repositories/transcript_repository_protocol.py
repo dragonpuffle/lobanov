@@ -12,10 +12,11 @@ class TranscriptRepositoryProtocol[SessionT](Protocol):
         raise NotImplementedError("TranscriptRepositoryProtocol.context")
         yield  # pyright: ignore[reportUnreachable]
 
-    async def create(self, transcript: Transcript) -> Transcript:
+    async def create(self, session: SessionT, transcript: Transcript) -> Transcript:
         """Create a new transcript in the repository.
 
         Args:
+            session: The database session.
             transcript: The Transcript entity to create.
 
         Returns:
@@ -26,10 +27,11 @@ class TranscriptRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_id(self, transcript_id: UUID) -> Transcript | None:
+    async def get_by_id(self, session: SessionT, transcript_id: UUID) -> Transcript | None:
         """Retrieve a transcript by its unique identifier.
 
         Args:
+            session: The database session.
             transcript_id: The UUID of the transcript to retrieve.
 
         Returns:
@@ -40,10 +42,11 @@ class TranscriptRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_session_id(self, session_id: UUID) -> Transcript | None:
+    async def get_by_session_id(self, session: SessionT, session_id: UUID) -> Transcript | None:
         """Retrieve the transcript associated with a specific documentation session.
 
         Args:
+            session: The database session.
             session_id: The UUID of the documentation session.
 
         Returns:
@@ -54,10 +57,11 @@ class TranscriptRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_audio_record_id(self, audio_record_id: UUID) -> Transcript | None:
+    async def get_by_audio_record_id(self, session: SessionT, audio_record_id: UUID) -> Transcript | None:
         """Retrieve the transcript for a specific audio record.
 
         Args:
+            session: The database session.
             audio_record_id: The UUID of the audio record.
 
         Returns:
@@ -68,10 +72,11 @@ class TranscriptRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def update(self, transcript: Transcript) -> Transcript:
+    async def update(self, session: SessionT, transcript: Transcript) -> Transcript:
         """Update an existing transcript.
 
         Args:
+            session: The database session.
             transcript: The Transcript entity with updated fields.
 
         Returns:
@@ -82,10 +87,11 @@ class TranscriptRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def delete(self, transcript_id: UUID) -> bool:
+    async def delete(self, session: SessionT, transcript_id: UUID) -> bool:
         """Delete a transcript by its unique identifier.
 
         Args:
+            session: The database session.
             transcript_id: The UUID of the transcript to delete.
 
         Returns:

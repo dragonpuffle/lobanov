@@ -3,6 +3,7 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lobanov.adapters.postgres_models.base import Base, IDMixin, TimestampMixin
+from lobanov.domain.entities.clinical_fact import ClinicalFact as ClinicalFactEntity
 
 
 class ClinicalFact(Base, IDMixin, TimestampMixin):
@@ -26,3 +27,19 @@ class ClinicalFact(Base, IDMixin, TimestampMixin):
         Index("ix_clinical_facts_session_id", "session_id"),
         Index("ix_clinical_facts_transcript_id", "transcript_id"),
     )
+
+    def to_domain(self) -> ClinicalFactEntity:
+        return ClinicalFactEntity(
+            id=self.id,
+            session_id=self.session_id,
+            transcript_id=self.transcript_id,
+            is_updated_by_user=self.is_updated_by_user,
+            fact_type=self.fact_type,
+            value=self.value,
+            confidence=self.confidence,
+            source_text=self.source_text,
+            source_start_index=self.source_start_index,
+            source_end_index=self.source_end_index,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+        )

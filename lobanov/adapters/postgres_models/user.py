@@ -2,6 +2,7 @@ from sqlalchemy import Boolean, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lobanov.adapters.postgres_models.base import Base, IDMixin, TimestampMixin
+from lobanov.domain.entities.user import User as UserEntity
 
 
 class User(Base, IDMixin, TimestampMixin):
@@ -13,3 +14,14 @@ class User(Base, IDMixin, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     __table_args__ = (Index("ix_users_email", "email"),)
+
+    def to_domain(self) -> UserEntity:
+        return UserEntity(
+            id=self.id,
+            email=self.email,
+            hashed_password=self.hashed_password,
+            full_name=self.full_name,
+            is_active=self.is_active,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+        )

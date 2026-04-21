@@ -12,10 +12,11 @@ class AudioRecordRepositoryProtocol[SessionT](Protocol):
         raise NotImplementedError("AudioRecordRepositoryProtocol.context")
         yield  # pyright: ignore[reportUnreachable]
 
-    async def create(self, audio_record: AudioRecord) -> AudioRecord:
+    async def create(self, session: SessionT, audio_record: AudioRecord) -> AudioRecord:
         """Create a new audio record in the repository.
 
         Args:
+            session: The database session.
             audio_record: The AudioRecord entity to create.
 
         Returns:
@@ -26,10 +27,11 @@ class AudioRecordRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_id(self, audio_record_id: UUID) -> AudioRecord | None:
+    async def get_by_id(self, session: SessionT, audio_record_id: UUID) -> AudioRecord | None:
         """Retrieve an audio record by its unique identifier.
 
         Args:
+            session: The database session.
             audio_record_id: The UUID of the audio record to retrieve.
 
         Returns:
@@ -40,10 +42,11 @@ class AudioRecordRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_session_id(self, session_id: UUID) -> AudioRecord | None:
+    async def get_by_session_id(self, session: SessionT, session_id: UUID) -> AudioRecord | None:
         """Retrieve an audio record associated with a specific documentation session.
 
         Args:
+            session: The database session.
             session_id: The UUID of the documentation session.
 
         Returns:
@@ -54,10 +57,11 @@ class AudioRecordRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def delete(self, audio_record_id: UUID) -> bool:
+    async def delete(self, session: SessionT, audio_record_id: UUID) -> bool:
         """Delete an audio record by its unique identifier.
 
         Args:
+            session: The database session.
             audio_record_id: The UUID of the audio record to delete.
 
         Returns:
@@ -68,10 +72,11 @@ class AudioRecordRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_file_path(self, audio_record_id: UUID) -> str | None:
+    async def get_file_path(self, session: SessionT, audio_record_id: UUID) -> str | None:
         """Retrieve the file path of an audio record.
 
         Args:
+            session: The database session.
             audio_record_id: The UUID of the audio record.
 
         Returns:

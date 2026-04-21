@@ -14,10 +14,11 @@ class UserRepositoryProtocol[SessionT](Protocol):
         raise NotImplementedError("UserRepositoryProtocol.context")
         yield  # pyright: ignore[reportUnreachable]
 
-    async def create(self, user: User) -> User:
+    async def create(self, session: SessionT, user: User) -> User:
         """Create a new user.
 
         Args:
+            session: The database session.
             user: The user entity to create.
 
         Returns:
@@ -25,10 +26,11 @@ class UserRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_id(self, user_id: UUID) -> User | None:
+    async def get_by_id(self, session: SessionT, user_id: UUID) -> User | None:
         """Get a user by ID.
 
         Args:
+            session: The database session.
             user_id: The UUID of the user.
 
         Returns:
@@ -36,10 +38,11 @@ class UserRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_email(self, email: str) -> User | None:
+    async def get_by_email(self, session: SessionT, email: str) -> User | None:
         """Get a user by email.
 
         Args:
+            session: The database session.
             email: The email address of the user.
 
         Returns:
@@ -47,10 +50,11 @@ class UserRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def update(self, user: User) -> User:
+    async def update(self, session: SessionT, user: User) -> User:
         """Update an existing user.
 
         Args:
+            session: The database session.
             user: The user entity with updated fields.
 
         Returns:
@@ -58,10 +62,11 @@ class UserRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def delete(self, user_id: UUID) -> bool:
+    async def delete(self, session: SessionT, user_id: UUID) -> bool:
         """Delete a user by ID.
 
         Args:
+            session: The database session.
             user_id: The UUID of the user to delete.
 
         Returns:
@@ -69,10 +74,11 @@ class UserRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_all(self, limit: int = 100, offset: int = 0) -> list[User]:
+    async def get_all(self, session: SessionT, limit: int = 100, offset: int = 0) -> list[User]:
         """Get all users with pagination.
 
         Args:
+            session: The database session.
             limit: Maximum number of users to return.
             offset: Number of users to skip.
 

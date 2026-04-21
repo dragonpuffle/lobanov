@@ -4,6 +4,7 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from lobanov.adapters.postgres_models.base import Base, IDMixin, TimestampMixin
+from lobanov.domain.entities.medical_document import MedicalDocument as MedicalDocumentEntity
 from lobanov.domain.entities.medical_document import MedicalDocumentStatus
 
 
@@ -27,3 +28,15 @@ class MedicalDocument(Base, IDMixin, TimestampMixin):
         Index("ix_medical_documents_session_id", "session_id"),
         Index("ix_medical_documents_transcript_id", "transcript_id"),
     )
+
+    def to_domain(self) -> MedicalDocumentEntity:
+        return MedicalDocumentEntity(
+            id=self.id,
+            user_id=self.user_id,
+            session_id=self.session_id,
+            template_id=self.template_id,
+            transcript_id=self.transcript_id,
+            status=self.status,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+        )

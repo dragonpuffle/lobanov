@@ -12,10 +12,11 @@ class MedicalDocumentRepositoryProtocol[SessionT](Protocol):
         raise NotImplementedError("MedicalDocumentRepositoryProtocol.context")
         yield  # pyright: ignore[reportUnreachable]
 
-    async def create(self, document: MedicalDocument) -> MedicalDocument:
+    async def create(self, session: SessionT, document: MedicalDocument) -> MedicalDocument:
         """Create a new medical document in the repository.
 
         Args:
+            session: The database session.
             document: The MedicalDocument entity to create.
 
         Returns:
@@ -26,10 +27,11 @@ class MedicalDocumentRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_id(self, document_id: UUID) -> MedicalDocument | None:
+    async def get_by_id(self, session: SessionT, document_id: UUID) -> MedicalDocument | None:
         """Retrieve a medical document by its unique identifier.
 
         Args:
+            session: The database session.
             document_id: The UUID of the document to retrieve.
 
         Returns:
@@ -40,10 +42,11 @@ class MedicalDocumentRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_user_id(self, user_id: UUID, limit: int = 100, offset: int = 0) -> list[MedicalDocument]:
+    async def get_by_user_id(self, session: SessionT, user_id: UUID, limit: int = 100, offset: int = 0) -> list[MedicalDocument]:
         """Retrieve all medical documents for a specific user with pagination.
 
         Args:
+            session: The database session.
             user_id: The UUID of the user.
             limit: Maximum number of documents to return (default: 100).
             offset: Number of documents to skip (default: 0).
@@ -56,10 +59,11 @@ class MedicalDocumentRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_session_id(self, session_id: UUID) -> MedicalDocument | None:
+    async def get_by_session_id(self, session: SessionT, session_id: UUID) -> MedicalDocument | None:
         """Retrieve the medical document associated with a specific documentation session.
 
         Args:
+            session: The database session.
             session_id: The UUID of the documentation session.
 
         Returns:
@@ -70,10 +74,11 @@ class MedicalDocumentRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def update(self, document: MedicalDocument) -> MedicalDocument:
+    async def update(self, session: SessionT, document: MedicalDocument) -> MedicalDocument:
         """Update an existing medical document.
 
         Args:
+            session: The database session.
             document: The MedicalDocument entity with updated fields.
 
         Returns:
@@ -84,10 +89,11 @@ class MedicalDocumentRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def delete(self, document_id: UUID) -> bool:
+    async def delete(self, session: SessionT, document_id: UUID) -> bool:
         """Delete a final medical document by its unique identifier.
 
         Args:
+            session: The database session.
             document_id: The UUID of the document to delete.
 
         Returns:

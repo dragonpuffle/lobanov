@@ -14,10 +14,11 @@ class DocumentationSessionRepositoryProtocol[SessionT](Protocol):
         raise NotImplementedError("DocumentationSessionRepositoryProtocol.context")
         yield  # pyright: ignore[reportUnreachable]
 
-    async def create(self, session: DocumentationSession) -> DocumentationSession:
+    async def create(self, session: SessionT, session: DocumentationSession) -> DocumentationSession:
         """Create a new documentation session.
 
         Args:
+            session: The database session.
             session: The documentation session entity to create.
 
         Returns:
@@ -25,10 +26,11 @@ class DocumentationSessionRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_id(self, session_id: UUID) -> DocumentationSession | None:
+    async def get_by_id(self, session: SessionT, session_id: UUID) -> DocumentationSession | None:
         """Get a documentation session by ID.
 
         Args:
+            session: The database session.
             session_id: The UUID of the documentation session.
 
         Returns:
@@ -36,10 +38,11 @@ class DocumentationSessionRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_user_id(self, user_id: UUID, limit: int = 100, offset: int = 0) -> list[DocumentationSession]:
+    async def get_by_user_id(self, session: SessionT, user_id: UUID, limit: int = 100, offset: int = 0) -> list[DocumentationSession]:
         """Get all documentation sessions for a user with pagination.
 
         Args:
+            session: The database session.
             user_id: The UUID of the user.
             limit: Maximum number of sessions to return.
             offset: Number of sessions to skip.
@@ -49,10 +52,11 @@ class DocumentationSessionRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def update(self, session: DocumentationSession) -> DocumentationSession:
+    async def update(self, session: SessionT, session: DocumentationSession) -> DocumentationSession:
         """Update an existing documentation session.
 
         Args:
+            session: The database session.
             session: The documentation session entity with updated fields.
 
         Returns:
@@ -60,10 +64,11 @@ class DocumentationSessionRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def delete(self, session_id: UUID) -> bool:
+    async def delete(self, session: SessionT, session_id: UUID) -> bool:
         """Delete a documentation session by ID.
 
         Args:
+            session: The database session.
             session_id: The UUID of the documentation session to delete.
 
         Returns:
@@ -71,10 +76,11 @@ class DocumentationSessionRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_active_sessions(self, user_id: UUID, limit: int = 100, offset: int = 0) -> list[DocumentationSession]:
+    async def get_active_sessions(self, session: SessionT, user_id: UUID, limit: int = 100, offset: int = 0) -> list[DocumentationSession]:
         """Get active documentation sessions for a user (not confirmed).
 
         Args:
+            session: The database session.
             user_id: The UUID of the user.
             limit: Maximum number of sessions to return.
             offset: Number of sessions to skip.

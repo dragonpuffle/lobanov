@@ -13,10 +13,11 @@ class TemplateRepositoryProtocol[SessionT](Protocol):
         raise NotImplementedError("TemplateRepositoryProtocol.context")
         yield  # pyright: ignore[reportUnreachable]
 
-    async def create(self, template: MedicalDocumentTemplate) -> MedicalDocumentTemplate:
+    async def create(self, session: SessionT, template: MedicalDocumentTemplate) -> MedicalDocumentTemplate:
         """Create a new medical document template in the repository.
 
         Args:
+            session: The database session.
             template: The MedicalDocumentTemplate entity to create.
 
         Returns:
@@ -27,10 +28,11 @@ class TemplateRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_id(self, template_id: UUID) -> MedicalDocumentTemplate | None:
+    async def get_by_id(self, session: SessionT, template_id: UUID) -> MedicalDocumentTemplate | None:
         """Retrieve a medical document template by its unique identifier.
 
         Args:
+            session: The database session.
             template_id: The UUID of the template to retrieve.
 
         Returns:
@@ -41,10 +43,11 @@ class TemplateRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_all(self, limit: int = 100, offset: int = 0) -> list[MedicalDocumentTemplate]:
+    async def get_all(self, session: SessionT, limit: int = 100, offset: int = 0) -> list[MedicalDocumentTemplate]:
         """Retrieve all medical document templates with pagination.
 
         Args:
+            session: The database session.
             limit: Maximum number of templates to return (default: 100).
             offset: Number of templates to skip (default: 0).
 
@@ -56,10 +59,11 @@ class TemplateRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_active(self, limit: int = 100, offset: int = 0) -> list[MedicalDocumentTemplate]:
+    async def get_active(self, session: SessionT, limit: int = 100, offset: int = 0) -> list[MedicalDocumentTemplate]:
         """Retrieve all active medical document templates with pagination.
 
         Args:
+            session: The database session.
             limit: Maximum number of templates to return (default: 100).
             offset: Number of templates to skip (default: 0).
 
@@ -71,10 +75,11 @@ class TemplateRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def update(self, template: MedicalDocumentTemplate) -> MedicalDocumentTemplate:
+    async def update(self, session: SessionT, template: MedicalDocumentTemplate) -> MedicalDocumentTemplate:
         """Update an existing medical document template.
 
         Args:
+            session: The database session.
             template: The MedicalDocumentTemplate entity with updated fields.
 
         Returns:
@@ -85,10 +90,11 @@ class TemplateRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def delete(self, template_id: UUID) -> bool:
+    async def delete(self, session: SessionT, template_id: UUID) -> bool:
         """Delete a medical document template by its unique identifier.
 
         Args:
+            session: The database session.
             template_id: The UUID of the template to delete.
 
         Returns:
@@ -99,10 +105,11 @@ class TemplateRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_fields(self, template_id: UUID) -> list[TemplateField]:
+    async def get_fields(self, session: SessionT, template_id: UUID) -> list[TemplateField]:
         """Retrieve all fields defined in a specific template.
 
         Args:
+            session: The database session.
             template_id: The UUID of the template.
 
         Returns:
