@@ -1,5 +1,5 @@
 from sqlalchemy import Boolean, Index, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from lobanov.adapters.postgres_models.base import Base, IDMixin, TimestampMixin
 
@@ -12,8 +12,4 @@ class User(Base, IDMixin, TimestampMixin):
     full_name: Mapped[str] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    __table_args__ = (
-        Index("ix_users_email", "email"),
-    )
-
-    sessions = relationship("DocumentationSession", back_populates="user", cascade="all, delete-orphan")
+    __table_args__ = (Index("ix_users_email", "email"),)

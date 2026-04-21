@@ -1,20 +1,14 @@
 from . import repositories as repositories
 from . import services as services
-from .repositories import UserRepositoryProtocol
-from .repositories import DocumentationSessionRepositoryProtocol
-from .repositories import AudioRecordRepositoryProtocol
-from .repositories import TranscriptRepositoryProtocol
-from .repositories import ClinicalFactRepositoryProtocol
-from .repositories import TemplateRepositoryProtocol
-from .repositories import DraftRepositoryProtocol
-from .repositories import FinalDocumentRepositoryProtocol
-from .services import SpeechRecognitionProtocol
-from .services import TextProcessingProtocol
-from .services import ClinicalExtractionProtocol
-from .services import DraftGenerationProtocol
-from .services import FileStorageProtocol
-from .services import AuditLogProtocol
-from .services import SessionStateValidatorProtocol
-from .services import DocumentExporterProtocol
-from .services import FieldValueManagerProtocol
-from .services import PasswordManagerProtocol
+from .repositories import AudioRecordRepositoryProtocol as AudioRecordRepositoryProtocol
+from .repositories import ClinicalFactRepositoryProtocol as ClinicalFactRepositoryProtocol
+from .repositories import DocumentationSessionRepositoryProtocol as DocumentationSessionRepositoryProtocol
+from .repositories import MedicalDocumentRepositoryProtocol as MedicalDocumentRepositoryProtocol
+from .repositories import TemplateRepositoryProtocol as TemplateRepositoryProtocol
+from .repositories import TranscriptRepositoryProtocol as TranscriptRepositoryProtocol
+from .repositories import UserRepositoryProtocol as UserRepositoryProtocol
+from .services import ClinicalExtractionProtocol as ClinicalExtractionProtocol
+from .services import FileStorageProtocol as FileStorageProtocol
+from .services import PasswordManagerProtocol as PasswordManagerProtocol
+from .services import SpeechRecognitionProtocol as SpeechRecognitionProtocol
+from .services import TextProcessingProtocol as TextProcessingProtocol

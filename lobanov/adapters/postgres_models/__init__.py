@@ -4,8 +4,7 @@ from .base import IDMixin as IDMixin
 from .base import TimestampMixin as TimestampMixin
 from .clinical_fact import ClinicalFact as ClinicalFact
 from .documentation_session import DocumentationSession as DocumentationSession
-from .final_medical_document import FinalMedicalDocument as FinalMedicalDocument
-from .medical_document_draft import MedicalDocumentDraft as MedicalDocumentDraft
+from .medical_document import MedicalDocument as MedicalDocument
 from .medical_document_template import MedicalDocumentTemplate as MedicalDocumentTemplate
 from .template_field import TemplateField as TemplateField
 from .transcript import Transcript as Transcript

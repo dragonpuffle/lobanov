@@ -1,12 +1,18 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Protocol
 from uuid import UUID
-from typing import Protocol, List, Optional, runtime_checkable
 
 from lobanov.domain.entities.documentation_session import DocumentationSession
 
 
-@runtime_checkable
-class DocumentationSessionRepositoryProtocol(Protocol):
+class DocumentationSessionRepositoryProtocol[SessionT](Protocol):
     """Protocol for documentation session repository operations."""
+
+    @asynccontextmanager
+    async def context(self) -> AsyncGenerator[SessionT]:
+        raise NotImplementedError("DocumentationSessionRepositoryProtocol.context")
+        yield  # pyright: ignore[reportUnreachable]
 
     async def create(self, session: DocumentationSession) -> DocumentationSession:
         """Create a new documentation session.
@@ -19,7 +25,7 @@ class DocumentationSessionRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_by_id(self, session_id: UUID) -> Optional[DocumentationSession]:
+    async def get_by_id(self, session_id: UUID) -> DocumentationSession | None:
         """Get a documentation session by ID.
 
         Args:
@@ -30,9 +36,7 @@ class DocumentationSessionRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_by_user_id(
-        self, user_id: UUID, limit: int = 100, offset: int = 0
-    ) -> List[DocumentationSession]:
+    async def get_by_user_id(self, user_id: UUID, limit: int = 100, offset: int = 0) -> list[DocumentationSession]:
         """Get all documentation sessions for a user with pagination.
 
         Args:
@@ -67,9 +71,7 @@ class DocumentationSessionRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_active_sessions(
-        self, user_id: UUID, limit: int = 100, offset: int = 0
-    ) -> List[DocumentationSession]:
+    async def get_active_sessions(self, user_id: UUID, limit: int = 100, offset: int = 0) -> list[DocumentationSession]:
         """Get active documentation sessions for a user (not confirmed).
 
         Args:

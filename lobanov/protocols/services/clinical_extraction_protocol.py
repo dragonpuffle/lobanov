@@ -1,14 +1,11 @@
-from typing import Protocol, List, runtime_checkable
+from typing import Protocol
 
 from lobanov.domain.entities.clinical_fact import ClinicalFact
 from lobanov.domain.entities.template_field import TemplateField
 
 
-@runtime_checkable
 class ClinicalExtractionProtocol(Protocol):
-    async def extract_clinical_facts(
-        self, transcript: str, template_fields: List[TemplateField]
-    ) -> List[ClinicalFact]:
+    async def extract_clinical_facts(self, transcript: str, template_fields: list[TemplateField]) -> list[ClinicalFact]:
         """Extract clinical facts from a transcript based on template field definitions.
 
         Args:

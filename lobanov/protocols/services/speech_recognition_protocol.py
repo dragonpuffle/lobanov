@@ -1,9 +1,8 @@
-from typing import Protocol, List, runtime_checkable
+from typing import Protocol
 
 from lobanov.domain.entities.transcript import Transcript
 
 
-@runtime_checkable
 class SpeechRecognitionProtocol(Protocol):
     async def transcribe_audio(self, file_path: str, language: str) -> Transcript:
         """Transcribe an audio file to text using speech recognition.
@@ -20,7 +19,7 @@ class SpeechRecognitionProtocol(Protocol):
         """
         ...
 
-    async def get_supported_languages(self) -> List[str]:
+    async def get_supported_languages(self) -> list[str]:
         """Get the list of supported languages for speech recognition.
 
         Args:

@@ -1,9 +1,8 @@
-from uuid import UUID
-from typing import Protocol, runtime_checkable
 from io import BytesIO
+from typing import Protocol
+from uuid import UUID
 
 
-@runtime_checkable
 class FileStorageProtocol(Protocol):
     async def save_audio(self, file: BytesIO, filename: str, session_id: UUID) -> str:
         """Save an audio file to storage.

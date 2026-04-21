@@ -5,16 +5,15 @@ from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, Settings
 
 from lobanov.infra.configs import (
     AppConfig,
-    PostgresConfig,
-    JWTConfig,
     CORSConfig,
-    StorageConfig,
-    STTConfig,
-    NLPConfig,
     CeleryConfig,
+    JWTConfig,
+    NLPConfig,
+    PostgresConfig,
     RateLimitConfig,
+    STTConfig,
+    StorageConfig,
 )
-
 
 
 class GlobalConfig(BaseSettings):

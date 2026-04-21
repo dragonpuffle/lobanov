@@ -1,12 +1,18 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Protocol
 from uuid import UUID
-from typing import Protocol, List, Optional, runtime_checkable
 
 from lobanov.domain.entities.user import User
 
 
-@runtime_checkable
-class UserRepositoryProtocol(Protocol):
+class UserRepositoryProtocol[SessionT](Protocol):
     """Protocol for user repository operations."""
+
+    @asynccontextmanager
+    async def context(self) -> AsyncGenerator[SessionT]:
+        raise NotImplementedError("UserRepositoryProtocol.context")
+        yield  # pyright: ignore[reportUnreachable]
 
     async def create(self, user: User) -> User:
         """Create a new user.
@@ -19,7 +25,7 @@ class UserRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_by_id(self, user_id: UUID) -> Optional[User]:
+    async def get_by_id(self, user_id: UUID) -> User | None:
         """Get a user by ID.
 
         Args:
@@ -30,7 +36,7 @@ class UserRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_by_email(self, email: str) -> Optional[User]:
+    async def get_by_email(self, email: str) -> User | None:
         """Get a user by email.
 
         Args:
@@ -63,7 +69,7 @@ class UserRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_all(self, limit: int = 100, offset: int = 0) -> List[User]:
+    async def get_all(self, limit: int = 100, offset: int = 0) -> list[User]:
         """Get all users with pagination.
 
         Args:

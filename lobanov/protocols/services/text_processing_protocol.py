@@ -1,7 +1,6 @@
-from typing import Protocol, runtime_checkable
+from typing import Protocol
 
 
-@runtime_checkable
 class TextProcessingProtocol(Protocol):
     async def preprocess_text(self, text: str) -> str:
         """Preprocess text for further processing or analysis.

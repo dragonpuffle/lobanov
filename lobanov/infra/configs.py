@@ -1,5 +1,4 @@
 from pydantic import BaseModel, Field
-from typing import List
 
 
 class AppConfig(BaseModel):
@@ -16,6 +15,10 @@ class PostgresConfig(BaseModel):
     password: str = Field(description="PostgreSQL password")
     database: str = Field(description="PostgreSQL database name")
 
+    @property
+    def url(self) -> str:
+        return f"postgresql+asyncpg://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}"
+
 
 class JWTConfig(BaseModel):
     secret_key: str = Field(description="JWT secret key")
@@ -25,16 +28,16 @@ class JWTConfig(BaseModel):
 
 
 class CORSConfig(BaseModel):
-    origins: List[str] = Field(description="Allowed CORS origins")
+    origins: list[str] = Field(description="Allowed CORS origins")
     allow_credentials: bool = Field(description="Allow credentials")
-    allow_methods: List[str] = Field(description="Allowed HTTP methods")
-    allow_headers: List[str] = Field(description="Allowed HTTP headers")
+    allow_methods: list[str] = Field(description="Allowed HTTP methods")
+    allow_headers: list[str] = Field(description="Allowed HTTP headers")
 
 
 class StorageConfig(BaseModel):
     audio_path: str = Field(description="Path to audio storage")
     max_audio_size: int = Field(description="Maximum audio file size in bytes")
-    allowed_audio_formats: List[str] = Field(description="Allowed audio file formats")
+    allowed_audio_formats: list[str] = Field(description="Allowed audio file formats")
     document_path: str = Field(description="Path to document storage")
     max_document_size: int = Field(description="Maximum document file size in bytes")
 

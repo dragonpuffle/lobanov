@@ -1,11 +1,17 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Protocol
 from uuid import UUID
-from typing import Protocol, List, Optional, runtime_checkable
 
 from lobanov.domain.entities.clinical_fact import ClinicalFact
 
 
-@runtime_checkable
-class ClinicalFactRepositoryProtocol(Protocol):
+class ClinicalFactRepositoryProtocol[SessionT](Protocol):
+    @asynccontextmanager
+    async def context(self) -> AsyncGenerator[SessionT]:
+        raise NotImplementedError("ClinicalFactRepositoryProtocol.context")
+        yield  # pyright: ignore[reportUnreachable]
+
     async def create(self, clinical_fact: ClinicalFact) -> ClinicalFact:
         """Create a new clinical fact in the repository.
 
@@ -20,7 +26,7 @@ class ClinicalFactRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_by_id(self, fact_id: UUID) -> Optional[ClinicalFact]:
+    async def get_by_id(self, fact_id: UUID) -> ClinicalFact | None:
         """Retrieve a clinical fact by its unique identifier.
 
         Args:
@@ -34,7 +40,7 @@ class ClinicalFactRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_by_session_id(self, session_id: UUID) -> List[ClinicalFact]:
+    async def get_by_session_id(self, session_id: UUID) -> list[ClinicalFact]:
         """Retrieve all clinical facts associated with a specific documentation session.
 
         Args:
@@ -48,7 +54,7 @@ class ClinicalFactRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_by_transcript_id(self, transcript_id: UUID) -> List[ClinicalFact]:
+    async def get_by_transcript_id(self, transcript_id: UUID) -> list[ClinicalFact]:
         """Retrieve all clinical facts extracted from a specific transcript.
 
         Args:
@@ -76,9 +82,7 @@ class ClinicalFactRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_by_fact_type(
-        self, session_id: UUID, fact_type: str
-    ) -> List[ClinicalFact]:
+    async def get_by_fact_type(self, session_id: UUID, fact_type: str) -> list[ClinicalFact]:
         """Retrieve clinical facts of a specific type from a session.
 
         Args:

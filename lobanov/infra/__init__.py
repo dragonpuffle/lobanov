@@ -1,10 +1,10 @@
 from .config import GlobalConfig as GlobalConfig
 from .configs import AppConfig as AppConfig
-from .configs import PostgresConfig as PostgresConfig
-from .configs import JWTConfig as JWTConfig
 from .configs import CORSConfig as CORSConfig
-from .configs import StorageConfig as StorageConfig
-from .configs import STTConfig as STTConfig
-from .configs import NLPConfig as NLPConfig
 from .configs import CeleryConfig as CeleryConfig
+from .configs import JWTConfig as JWTConfig
+from .configs import NLPConfig as NLPConfig
+from .configs import PostgresConfig as PostgresConfig
 from .configs import RateLimitConfig as RateLimitConfig
+from .configs import STTConfig as STTConfig
+from .configs import StorageConfig as StorageConfig

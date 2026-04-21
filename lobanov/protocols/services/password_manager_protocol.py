@@ -1,9 +1,8 @@
-from typing import Protocol, runtime_checkable
+from typing import Protocol
 
 from lobanov.domain.entities.user import User
 
 
-@runtime_checkable
 class PasswordManagerProtocol(Protocol):
     async def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify a plain text password against a hashed password.
@@ -34,9 +33,7 @@ class PasswordManagerProtocol(Protocol):
         """
         ...
 
-    async def change_password(
-        self, user: User, old_password: str, new_password: str
-    ) -> None:
+    async def change_password(self, user: User, old_password: str, new_password: str) -> None:
         """Change a user's password after verifying the old password.
 
         Args:

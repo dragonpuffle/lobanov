@@ -1,11 +1,17 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Protocol
 from uuid import UUID
-from typing import Protocol, Optional, runtime_checkable
 
 from lobanov.domain.entities.transcript import Transcript
 
 
-@runtime_checkable
-class TranscriptRepositoryProtocol(Protocol):
+class TranscriptRepositoryProtocol[SessionT](Protocol):
+    @asynccontextmanager
+    async def context(self) -> AsyncGenerator[SessionT]:
+        raise NotImplementedError("TranscriptRepositoryProtocol.context")
+        yield  # pyright: ignore[reportUnreachable]
+
     async def create(self, transcript: Transcript) -> Transcript:
         """Create a new transcript in the repository.
 
@@ -20,7 +26,7 @@ class TranscriptRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_by_id(self, transcript_id: UUID) -> Optional[Transcript]:
+    async def get_by_id(self, transcript_id: UUID) -> Transcript | None:
         """Retrieve a transcript by its unique identifier.
 
         Args:
@@ -34,7 +40,7 @@ class TranscriptRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_by_session_id(self, session_id: UUID) -> Optional[Transcript]:
+    async def get_by_session_id(self, session_id: UUID) -> Transcript | None:
         """Retrieve the transcript associated with a specific documentation session.
 
         Args:
@@ -48,7 +54,7 @@ class TranscriptRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_by_audio_record_id(self, audio_record_id: UUID) -> Optional[Transcript]:
+    async def get_by_audio_record_id(self, audio_record_id: UUID) -> Transcript | None:
         """Retrieve the transcript for a specific audio record.
 
         Args:

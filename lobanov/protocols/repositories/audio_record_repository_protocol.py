@@ -1,11 +1,17 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Protocol
 from uuid import UUID
-from typing import Protocol, Optional, runtime_checkable
 
 from lobanov.domain.entities.audio_record import AudioRecord
 
 
-@runtime_checkable
-class AudioRecordRepositoryProtocol(Protocol):
+class AudioRecordRepositoryProtocol[SessionT](Protocol):
+    @asynccontextmanager
+    async def context(self) -> AsyncGenerator[SessionT]:
+        raise NotImplementedError("AudioRecordRepositoryProtocol.context")
+        yield  # pyright: ignore[reportUnreachable]
+
     async def create(self, audio_record: AudioRecord) -> AudioRecord:
         """Create a new audio record in the repository.
 
@@ -20,7 +26,7 @@ class AudioRecordRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_by_id(self, audio_record_id: UUID) -> Optional[AudioRecord]:
+    async def get_by_id(self, audio_record_id: UUID) -> AudioRecord | None:
         """Retrieve an audio record by its unique identifier.
 
         Args:
@@ -34,7 +40,7 @@ class AudioRecordRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_by_session_id(self, session_id: UUID) -> Optional[AudioRecord]:
+    async def get_by_session_id(self, session_id: UUID) -> AudioRecord | None:
         """Retrieve an audio record associated with a specific documentation session.
 
         Args:
@@ -62,7 +68,7 @@ class AudioRecordRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_file_path(self, audio_record_id: UUID) -> Optional[str]:
+    async def get_file_path(self, audio_record_id: UUID) -> str | None:
         """Retrieve the file path of an audio record.
 
         Args:

@@ -1,12 +1,18 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Protocol
 from uuid import UUID
-from typing import Protocol, List, Optional, runtime_checkable
 
 from lobanov.domain.entities.medical_document_template import MedicalDocumentTemplate
 from lobanov.domain.entities.template_field import TemplateField
 
 
-@runtime_checkable
-class TemplateRepositoryProtocol(Protocol):
+class TemplateRepositoryProtocol[SessionT](Protocol):
+    @asynccontextmanager
+    async def context(self) -> AsyncGenerator[SessionT]:
+        raise NotImplementedError("TemplateRepositoryProtocol.context")
+        yield  # pyright: ignore[reportUnreachable]
+
     async def create(self, template: MedicalDocumentTemplate) -> MedicalDocumentTemplate:
         """Create a new medical document template in the repository.
 
@@ -21,7 +27,7 @@ class TemplateRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_by_id(self, template_id: UUID) -> Optional[MedicalDocumentTemplate]:
+    async def get_by_id(self, template_id: UUID) -> MedicalDocumentTemplate | None:
         """Retrieve a medical document template by its unique identifier.
 
         Args:
@@ -35,7 +41,7 @@ class TemplateRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_all(self, limit: int = 100, offset: int = 0) -> List[MedicalDocumentTemplate]:
+    async def get_all(self, limit: int = 100, offset: int = 0) -> list[MedicalDocumentTemplate]:
         """Retrieve all medical document templates with pagination.
 
         Args:
@@ -50,7 +56,7 @@ class TemplateRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_active(self, limit: int = 100, offset: int = 0) -> List[MedicalDocumentTemplate]:
+    async def get_active(self, limit: int = 100, offset: int = 0) -> list[MedicalDocumentTemplate]:
         """Retrieve all active medical document templates with pagination.
 
         Args:
@@ -93,7 +99,7 @@ class TemplateRepositoryProtocol(Protocol):
         """
         ...
 
-    async def get_fields(self, template_id: UUID) -> List[TemplateField]:
+    async def get_fields(self, template_id: UUID) -> list[TemplateField]:
         """Retrieve all fields defined in a specific template.
 
         Args:
