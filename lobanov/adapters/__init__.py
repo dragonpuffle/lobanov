@@ -1,0 +1,13 @@
+from . import postgres_models as postgres_models
+from .postgres_models import AudioRecord as AudioRecord
+from .postgres_models import Base as Base
+from .postgres_models import ClinicalFact as ClinicalFact
+from .postgres_models import DocumentationSession as DocumentationSession
+from .postgres_models import FinalMedicalDocument as FinalMedicalDocument
+from .postgres_models import IDMixin as IDMixin
+from .postgres_models import MedicalDocumentDraft as MedicalDocumentDraft
+from .postgres_models import MedicalDocumentTemplate as MedicalDocumentTemplate
+from .postgres_models import TemplateField as TemplateField
+from .postgres_models import Transcript as Transcript
+from .postgres_models import TimestampMixin as TimestampMixin
+from .postgres_models import User as User

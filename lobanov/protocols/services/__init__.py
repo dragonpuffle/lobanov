@@ -1,0 +1,20 @@
+from . import speech_recognition_protocol as speech_recognition_protocol
+from . import text_processing_protocol as text_processing_protocol
+from . import clinical_extraction_protocol as clinical_extraction_protocol
+from . import draft_generation_protocol as draft_generation_protocol
+from . import file_storage_protocol as file_storage_protocol
+from . import audit_log_protocol as audit_log_protocol
+from . import session_state_validator_protocol as session_state_validator_protocol
+from . import document_exporter_protocol as document_exporter_protocol
+from . import field_value_manager_protocol as field_value_manager_protocol
+from . import password_manager_protocol as password_manager_protocol
+from .speech_recognition_protocol import SpeechRecognitionProtocol
+from .text_processing_protocol import TextProcessingProtocol
+from .clinical_extraction_protocol import ClinicalExtractionProtocol
+from .draft_generation_protocol import DraftGenerationProtocol
+from .file_storage_protocol import FileStorageProtocol
+from .audit_log_protocol import AuditLogProtocol
+from .session_state_validator_protocol import SessionStateValidatorProtocol
+from .document_exporter_protocol import DocumentExporterProtocol
+from .field_value_manager_protocol import FieldValueManagerProtocol
+from .password_manager_protocol import PasswordManagerProtocol
