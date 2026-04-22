@@ -18,7 +18,7 @@ class CreateDocumentationSession[SessionT]:
         self.user_repository = user_repository
         self.session_repository = session_repository
 
-    async def execute(self, user_id: UUID) -> DocumentationSession:
+    async def execute(self, user_id: UUID, template_id: UUID) -> DocumentationSession:
         async with self.user_repository.context() as session:
             user = await self.user_repository.get_by_id(session, user_id)
             if user is None:
@@ -33,6 +33,7 @@ class CreateDocumentationSession[SessionT]:
             documentation_session = DocumentationSession(
                 id=uuid4(),
                 user_id=user_id,
+                template_id=template_id,
                 status=DocumentationSessionStatus.CREATED,
                 created_at=now,
                 updated_at=now,

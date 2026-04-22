@@ -1,0 +1,127 @@
+import os
+from datetime import datetime
+
+from fastapi import APIRouter, HTTPException, status
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from lobanov.protocols.services import FileStorageProtocol
+
+router = APIRouter(prefix="/health", tags=["health"])
+
+
+class HealthCheckResponse:
+    def __init__(self, status: str, timestamp: str):
+        self.status = status
+        self.timestamp = timestamp
+
+
+class DatabaseHealthResponse(HealthCheckResponse):
+    def __init__(self, status: str, timestamp: str, database_status: str, latency_ms: float | None = None):
+        super().__init__(status, timestamp)
+        self.database_status = database_status
+        self.latency_ms = latency_ms
+
+
+class StorageHealthResponse(HealthCheckResponse):
+    def __init__(self, status: str, timestamp: str, storage_status: str, storage_path: str | None = None):
+        super().__init__(status, timestamp)
+        self.storage_status = storage_status
+        self.storage_path = storage_path
+
+
+@router.get("")
+async def health_check() -> dict[str, str]:
+    """Basic health check endpoint."""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.get("/db")
+async def database_health_check(
+    session_factory: type[AsyncSession],
+) -> dict[str, str | float]:
+    """Check database connectivity."""
+    start_time = datetime.utcnow()
+
+    try:
+        async with session_factory() as session:
+            result = await session.execute(text("SELECT 1"))
+            await result.fetchone()
+
+        end_time = datetime.utcnow()
+        latency_ms = (end_time - start_time).total_seconds() * 1000
+
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database_status": "connected",
+            "latency_ms": round(latency_ms, 2),
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "status": "unhealthy",
+                "timestamp": datetime.utcnow().isoformat(),
+                "database_status": "disconnected",
+                "error": str(e),
+            },
+        ) from e
+
+
+@router.get("/storage")
+async def storage_health_check(
+    storage_service: FileStorageProtocol,
+) -> dict[str, str]:
+    """Check storage availability."""
+    try:
+        from pathlib import Path
+
+        storage_path = None
+
+        if hasattr(storage_service, "base_path"):
+            storage_path = str(storage_service.base_path)
+
+            if not Path(storage_path).exists():
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail={
+                        "status": "unhealthy",
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "storage_status": "unavailable",
+                        "error": f"Storage path does not exist: {storage_path}",
+                    },
+                )
+
+            if not os.access(storage_path, os.W_OK):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail={
+                        "status": "unhealthy",
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "storage_status": "read_only",
+                        "error": f"Storage path is not writable: {storage_path}",
+                    },
+                )
+
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "storage_status": "available",
+            "storage_path": storage_path,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "status": "unhealthy",
+                "timestamp": datetime.utcnow().isoformat(),
+                "storage_status": "unavailable",
+                "error": str(e),
+            },
+        ) from e

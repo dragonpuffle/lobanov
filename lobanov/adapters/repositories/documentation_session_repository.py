@@ -34,6 +34,7 @@ class DocumentationSessionRepository(DocumentationSessionRepositoryProtocol[Asyn
         session_model = SessionModel(
             id=documentation_session.id,
             user_id=documentation_session.user_id,
+            template_id=documentation_session.template_id,
             status=documentation_session.status,
             created_at=documentation_session.created_at,
             updated_at=documentation_session.updated_at,

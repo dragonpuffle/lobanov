@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lobanov.app.api.v1.dependencies import get_current_user
 from lobanov.app.api.v1.documentation_session.dto import (
+    CreateSessionRequest,
     SessionDetailsResponse,
     SessionListResponse,
     SessionResponse,
@@ -35,14 +36,16 @@ class SessionNotFoundError(SessionHandlerError):
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_session(
+    request: CreateSessionRequest,
     current_user: Annotated[User, Depends(get_current_user)],
     create_session_use_case: CreateDocumentationSession[AsyncSession],
 ) -> SessionResponse:
     try:
-        session = await create_session_use_case.execute(current_user.id)
+        session = await create_session_use_case.execute(current_user.id, request.template_id)
         return SessionResponse(
             id=session.id,
             user_id=session.user_id,
+            template_id=session.template_id,
             status=session.status,
             created_at=session.created_at.isoformat(),
             updated_at=session.updated_at.isoformat(),
@@ -79,6 +82,7 @@ async def get_sessions(
                 SessionResponse(
                     id=session.id,
                     user_id=session.user_id,
+                    template_id=session.template_id,
                     status=session.status,
                     created_at=session.created_at.isoformat(),
                     updated_at=session.updated_at.isoformat(),
@@ -114,6 +118,7 @@ async def get_session_details(
         return SessionDetailsResponse(
             id=details.session.id,
             user_id=details.session.user_id,
+            template_id=details.session.template_id,
             status=details.session.status,
             created_at=details.session.created_at.isoformat(),
             updated_at=details.session.updated_at.isoformat(),

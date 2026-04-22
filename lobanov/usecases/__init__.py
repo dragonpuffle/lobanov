@@ -3,6 +3,7 @@ from . import clinical_facts as clinical_facts
 from . import document_session as document_session
 from . import medical_document as medical_document
 from . import transcript as transcript
+from .audio import ProcessTranscriptionBackgroundTask as ProcessTranscriptionBackgroundTask
 from .audio import TranscribeAudio as TranscribeAudio
 from .audio import UploadAudio as UploadAudio
 from .clinical_facts import ExtractClinicalFacts as ExtractClinicalFacts

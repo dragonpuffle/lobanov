@@ -50,6 +50,7 @@ class WhisperSTTService(SpeechRecognitionProtocol):
             full_text = full_text.strip()
 
             avg_probability = 0.0
+            confidence_score = 0.0
             if segments:
                 total_prob = sum(segment.avg_logprob for segment in segments if segment.avg_logprob > 0)
                 avg_probability = total_prob / len(segments) if segments else 0.0

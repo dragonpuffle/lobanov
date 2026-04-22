@@ -1,9 +1,10 @@
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from lobanov.domain import ClinicalFact
+from lobanov.domain import ClinicalFact, DocumentationSession, DocumentationSessionStatus
 from lobanov.protocols.repositories import (
     ClinicalFactRepositoryProtocol,
+    DocumentationSessionRepositoryProtocol,
     TemplateRepositoryProtocol,
     TranscriptRepositoryProtocol,
 )
@@ -18,6 +19,10 @@ class TemplateNotFoundError(Exception):
     pass
 
 
+class SessionNotFoundError(Exception):
+    pass
+
+
 class ClinicalExtractionError(Exception):
     pass
 
@@ -28,18 +33,27 @@ class ExtractClinicalFacts[SessionT]:
         transcript_repository: TranscriptRepositoryProtocol[SessionT],
         clinical_fact_repository: ClinicalFactRepositoryProtocol[SessionT],
         template_repository: TemplateRepositoryProtocol[SessionT],
+        session_repository: DocumentationSessionRepositoryProtocol[SessionT],
         clinical_extraction_service: ClinicalExtractionProtocol,
     ):
         self.transcript_repository = transcript_repository
         self.clinical_fact_repository = clinical_fact_repository
         self.template_repository = template_repository
+        self.session_repository = session_repository
         self.clinical_extraction_service = clinical_extraction_service
 
-    async def execute(self, session: SessionT, transcript_id: UUID, template_id: UUID) -> list[ClinicalFact]:
+    async def execute(self, session: SessionT, transcript_id: UUID) -> list[ClinicalFact]:
         transcript = await self.transcript_repository.get_by_id(session, transcript_id)
         if transcript is None:
             error_message = f"Transcript with id {transcript_id} not found"
             raise TranscriptNotFoundError(error_message)
+
+        documentation_session = await self.session_repository.get_by_id(session, transcript.session_id)
+        if documentation_session is None:
+            error_message = f"Session with id {transcript.session_id} not found"
+            raise SessionNotFoundError(error_message)
+
+        template_id = documentation_session.template_id
 
         template = await self.template_repository.get_by_id(session, template_id)
         if template is None:
@@ -79,5 +93,15 @@ class ExtractClinicalFacts[SessionT]:
 
             created_fact = await self.clinical_fact_repository.create(session, clinical_fact)
             created_facts.append(created_fact)
+
+        updated_session = DocumentationSession(
+            id=documentation_session.id,
+            user_id=documentation_session.user_id,
+            template_id=documentation_session.template_id,
+            status=DocumentationSessionStatus.FACTS_EXTRACTED,
+            created_at=documentation_session.created_at,
+            updated_at=now,
+        )
+        await self.session_repository.update(session, updated_session)
 
         return created_facts

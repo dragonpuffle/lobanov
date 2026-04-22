@@ -8,6 +8,7 @@ class DocumentationSessionStatus(StrEnum):
     CREATED = "created"
     AUDIO_UPLOADED = "audio_uploaded"
     TRANSCRIBED = "transcribed"
+    FACTS_EXTRACTED = "facts_extracted"
     DRAFT_CREATED = "draft_created"
     CONFIRMED = "confirmed"
 
@@ -15,4 +16,5 @@ class DocumentationSessionStatus(StrEnum):
 class DocumentationSession(TimeBaseModel):
     id: UUID
     user_id: UUID
+    template_id: UUID
     status: DocumentationSessionStatus

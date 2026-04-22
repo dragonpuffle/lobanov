@@ -6,12 +6,13 @@ from lobanov.domain.entities.documentation_session import DocumentationSessionSt
 
 
 class CreateSessionRequest(BaseModel):
-    pass
+    template_id: UUID
 
 
 class SessionResponse(BaseModel):
     id: UUID
     user_id: UUID
+    template_id: UUID
     status: DocumentationSessionStatus
     created_at: str
     updated_at: str
@@ -25,6 +26,7 @@ class SessionListResponse(BaseModel):
 class SessionDetailsResponse(BaseModel):
     id: UUID
     user_id: UUID
+    template_id: UUID
     status: DocumentationSessionStatus
     created_at: str
     updated_at: str
