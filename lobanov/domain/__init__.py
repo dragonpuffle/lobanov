@@ -8,8 +8,8 @@ from .entities import MedicalDocument as MedicalDocument
 from .entities import MedicalDocumentStatus as MedicalDocumentStatus
 from .entities import MedicalDocumentTemplate as MedicalDocumentTemplate
 from .entities import TemplateField as TemplateField
-from .entities import TemplateFieldType as TemplateFieldType
 from .entities import Transcript as Transcript
+from .entities import TranscriptLanguage as TranscriptLanguage
 from .entities import User as User
 from .value_objects import AudioFile as AudioFile
 from .value_objects import Email as Email

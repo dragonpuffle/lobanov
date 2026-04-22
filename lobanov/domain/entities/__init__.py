@@ -14,6 +14,6 @@ from .medical_document import MedicalDocument as MedicalDocument
 from .medical_document import MedicalDocumentStatus as MedicalDocumentStatus
 from .medical_document_template import MedicalDocumentTemplate as MedicalDocumentTemplate
 from .template_field import TemplateField as TemplateField
-from .template_field import TemplateFieldType as TemplateFieldType
 from .transcript import Transcript as Transcript
+from .transcript import TranscriptLanguage as TranscriptLanguage
 from .user import User as User

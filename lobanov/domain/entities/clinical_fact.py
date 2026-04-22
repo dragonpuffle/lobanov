@@ -7,8 +7,8 @@ class ClinicalFact(TimeBaseModel):
     id: UUID
     session_id: UUID
     transcript_id: UUID
+    template_field_id: UUID
     is_updated_by_user: bool
-    fact_type: str
     value: str
     confidence: float
     source_text: str

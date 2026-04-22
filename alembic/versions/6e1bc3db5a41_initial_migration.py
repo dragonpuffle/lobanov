@@ -1,9 +1,9 @@
 # pyright: reportUnusedCallResult=false
 """Initial migration
 
-Revision ID: b92f05a72cb1
+Revision ID: 6e1bc3db5a41
 Revises:
-Create Date: 2026-04-21 22:13:21.417739+03:00
+Create Date: 2026-04-22 16:39:29.182008+03:00
 
 """
 
@@ -15,7 +15,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "b92f05a72cb1"
+revision: str = "6e1bc3db5a41"
 down_revision: str | Sequence[str] | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
@@ -74,11 +74,6 @@ def upgrade() -> None:
         sa.Column("template_id", sa.UUID(), nullable=False),
         sa.Column("name", sa.String(length=100), nullable=False),
         sa.Column("label", sa.String(length=255), nullable=False),
-        sa.Column(
-            "field_type",
-            sa.Enum("TEXT", "NUMBER", "DATE", "SELECT", "TEXTAREA", name="templatefieldtype"),
-            nullable=False,
-        ),
         sa.Column("is_required", sa.Boolean(), nullable=False),
         sa.Column("default_value", sa.String(length=500), nullable=True),
         sa.Column("options", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
@@ -122,8 +117,8 @@ def upgrade() -> None:
         "clinical_facts",
         sa.Column("session_id", sa.UUID(), nullable=False),
         sa.Column("transcript_id", sa.UUID(), nullable=False),
+        sa.Column("template_field_id", sa.UUID(), nullable=False),
         sa.Column("is_updated_by_user", sa.Boolean(), nullable=False),
-        sa.Column("fact_type", sa.String(length=100), nullable=False),
         sa.Column("value", sa.Text(), nullable=False),
         sa.Column("confidence", sa.Float(), nullable=False),
         sa.Column("source_text", sa.Text(), nullable=False),
@@ -133,10 +128,12 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["session_id"], ["documentation_sessions.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["template_field_id"], ["template_fields.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["transcript_id"], ["transcripts.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_clinical_facts_session_id", "clinical_facts", ["session_id"], unique=False)
+    op.create_index("ix_clinical_facts_template_field_id", "clinical_facts", ["template_field_id"], unique=False)
     op.create_index("ix_clinical_facts_transcript_id", "clinical_facts", ["transcript_id"], unique=False)
     op.create_table(
         "medical_documents",
@@ -174,6 +171,7 @@ def downgrade() -> None:
     op.drop_index("ix_medical_documents_session_id", table_name="medical_documents")
     op.drop_table("medical_documents")
     op.drop_index("ix_clinical_facts_transcript_id", table_name="clinical_facts")
+    op.drop_index("ix_clinical_facts_template_field_id", table_name="clinical_facts")
     op.drop_index("ix_clinical_facts_session_id", table_name="clinical_facts")
     op.drop_table("clinical_facts")
     op.drop_table("transcripts")

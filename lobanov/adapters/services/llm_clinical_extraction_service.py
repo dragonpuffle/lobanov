@@ -71,8 +71,8 @@ class LLMClinicalExtractionService(ClinicalExtractionProtocol):
                         id=uuid4(),
                         session_id=uuid4(),
                         transcript_id=uuid4(),
+                        template_field_id=field.id,
                         is_updated_by_user=False,
-                        fact_type=field.name,
                         value=value,
                         confidence=0.8,
                         source_text=source_text,
@@ -88,9 +88,7 @@ class LLMClinicalExtractionService(ClinicalExtractionProtocol):
     async def _llm_extract_facts(self, transcript: str, template_fields: list[TemplateField]) -> list[ClinicalFact]:
         facts: list[ClinicalFact] = []
 
-        field_descriptions = "\n".join([
-            f"- {field.name} ({field.label}): {field.field_type.value}" for field in template_fields
-        ])
+        field_descriptions = "\n".join([f"- {field.name} ({field.label})" for field in template_fields])
 
         prompt = f"""Extract clinical information from the following medical transcript.
 
@@ -145,13 +143,21 @@ Respond in JSON format with a list of facts."""
 
                 extracted_data = json.loads(content)
 
+                field_name_to_id = {field.name: field.id for field in template_fields}
+
                 for item in extracted_data:
+                    field_name = item.get("field_name", "")
+                    template_field_id = field_name_to_id.get(field_name)
+
+                    if not template_field_id:
+                        continue
+
                     fact = ClinicalFact(
                         id=uuid4(),
                         session_id=uuid4(),
                         transcript_id=uuid4(),
+                        template_field_id=template_field_id,
                         is_updated_by_user=False,
-                        fact_type=item.get("field_name", ""),
                         value=item.get("value", ""),
                         confidence=item.get("confidence", 0.7),
                         source_text=item.get("source_text", ""),

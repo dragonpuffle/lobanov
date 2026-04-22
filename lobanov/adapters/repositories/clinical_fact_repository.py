@@ -33,8 +33,8 @@ class ClinicalFactRepository(ClinicalFactRepositoryProtocol[AsyncSession]):
             id=clinical_fact.id,
             session_id=clinical_fact.session_id,
             transcript_id=clinical_fact.transcript_id,
+            template_field_id=clinical_fact.template_field_id,
             is_updated_by_user=clinical_fact.is_updated_by_user,
-            fact_type=clinical_fact.fact_type,
             value=clinical_fact.value,
             confidence=clinical_fact.confidence,
             source_text=clinical_fact.source_text,
@@ -85,11 +85,36 @@ class ClinicalFactRepository(ClinicalFactRepositoryProtocol[AsyncSession]):
         return True
 
     @override
-    async def get_by_fact_type(self, session: AsyncSession, session_id: UUID, fact_type: str) -> list[ClinicalFact]:
+    async def update(self, session: AsyncSession, clinical_fact: ClinicalFact) -> ClinicalFact:
+        result = await session.execute(select(ClinicalFactModel).where(ClinicalFactModel.id == clinical_fact.id))
+        session_model = result.scalar_one_or_none()
+        if session_model is None:
+            error_message = f"ClinicalFact with id {clinical_fact.id} not found"
+            raise ValueError(error_message)
+
+        session_model.session_id = clinical_fact.session_id
+        session_model.transcript_id = clinical_fact.transcript_id
+        session_model.template_field_id = clinical_fact.template_field_id
+        session_model.is_updated_by_user = clinical_fact.is_updated_by_user
+        session_model.value = clinical_fact.value
+        session_model.confidence = clinical_fact.confidence
+        session_model.source_text = clinical_fact.source_text
+        session_model.source_start_index = clinical_fact.source_start_index
+        session_model.source_end_index = clinical_fact.source_end_index
+        session_model.updated_at = clinical_fact.updated_at
+
+        await session.flush()
+        await session.refresh(session_model)
+        return session_model.to_domain()
+
+    @override
+    async def get_by_template_field_id(
+        self, session: AsyncSession, session_id: UUID, template_field_id: UUID
+    ) -> list[ClinicalFact]:
         result = await session.execute(
             select(ClinicalFactModel)
             .where(ClinicalFactModel.session_id == session_id)
-            .where(ClinicalFactModel.fact_type == fact_type)
+            .where(ClinicalFactModel.template_field_id == template_field_id)
             .order_by(ClinicalFactModel.confidence.desc())
         )
         session_models = result.scalars().all()

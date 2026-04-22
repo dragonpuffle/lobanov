@@ -87,16 +87,33 @@ class ClinicalFactRepositoryProtocol[SessionT](Protocol):
         """
         ...
 
-    async def get_by_fact_type(self, session: SessionT, session_id: UUID, fact_type: str) -> list[ClinicalFact]:
-        """Retrieve clinical facts of a specific type from a session.
+    async def update(self, session: SessionT, clinical_fact: ClinicalFact) -> ClinicalFact:
+        """Update an existing clinical fact in the repository.
+
+        Args:
+            session: The database session.
+            clinical_fact: The ClinicalFact entity to update.
+
+        Returns:
+            The updated ClinicalFact entity.
+
+        Raises:
+            RepositoryError: If the clinical fact cannot be updated due to database errors.
+        """
+        ...
+
+    async def get_by_template_field_id(
+        self, session: SessionT, session_id: UUID, template_field_id: UUID
+    ) -> list[ClinicalFact]:
+        """Retrieve clinical facts for a specific template field from a session.
 
         Args:
             session: The database session.
             session_id: The UUID of the documentation session.
-            fact_type: The type of clinical fact to filter by.
+            template_field_id: The UUID of the template field to filter by.
 
         Returns:
-            List of ClinicalFact entities matching the specified type.
+            List of ClinicalFact entities matching the specified template field.
 
         Raises:
             RepositoryError: If there is a database error during retrieval.
