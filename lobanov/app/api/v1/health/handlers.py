@@ -1,6 +1,7 @@
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 
+import aiofiles
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,7 +36,7 @@ async def health_check() -> dict[str, str]:
     """Basic health check endpoint."""
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(tz=UTC).isoformat(),
     }
 
 
@@ -44,19 +45,19 @@ async def database_health_check(
     session_factory: type[AsyncSession],
 ) -> dict[str, str | float]:
     """Check database connectivity."""
-    start_time = datetime.utcnow()
+    start_time = datetime.now(tz=UTC)
 
     try:
         async with session_factory() as session:
             result = await session.execute(text("SELECT 1"))
-            await result.fetchone()
+            result.fetchone()
 
-        end_time = datetime.utcnow()
+        end_time = datetime.now(tz=UTC)
         latency_ms = (end_time - start_time).total_seconds() * 1000
 
         return {
             "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "database_status": "connected",
             "latency_ms": round(latency_ms, 2),
         }
@@ -65,7 +66,7 @@ async def database_health_check(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
                 "status": "unhealthy",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
                 "database_status": "disconnected",
                 "error": str(e),
             },
@@ -75,22 +76,20 @@ async def database_health_check(
 @router.get("/storage")
 async def storage_health_check(
     storage_service: FileStorageProtocol,
-) -> dict[str, str]:
+) -> dict[str, str | None]:
     """Check storage availability."""
     try:
-        from pathlib import Path
-
         storage_path = None
 
         if hasattr(storage_service, "base_path"):
             storage_path = str(storage_service.base_path)
 
-            if not Path(storage_path).exists():
+            if not await aiofiles.os.path.exists(storage_path):
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail={
                         "status": "unhealthy",
-                        "timestamp": datetime.utcnow().isoformat(),
+                        "timestamp": datetime.now(tz=UTC).isoformat(),
                         "storage_status": "unavailable",
                         "error": f"Storage path does not exist: {storage_path}",
                     },
@@ -101,7 +100,7 @@ async def storage_health_check(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail={
                         "status": "unhealthy",
-                        "timestamp": datetime.utcnow().isoformat(),
+                        "timestamp": datetime.now(tz=UTC).isoformat(),
                         "storage_status": "read_only",
                         "error": f"Storage path is not writable: {storage_path}",
                     },
@@ -109,7 +108,7 @@ async def storage_health_check(
 
         return {
             "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "storage_status": "available",
             "storage_path": storage_path,
         }
@@ -120,7 +119,7 @@ async def storage_health_check(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
                 "status": "unhealthy",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
                 "storage_status": "unavailable",
                 "error": str(e),
             },

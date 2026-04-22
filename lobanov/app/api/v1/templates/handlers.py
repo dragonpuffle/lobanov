@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import ValidationError
@@ -27,11 +28,11 @@ class TemplateNotFoundError(TemplateHandlerError):
 
 @router.get("")
 async def list_templates(
-    current_user: Annotated[User, Depends(get_current_user)],
+    _: Annotated[User, Depends(get_current_user)],
     template_repository: TemplateRepositoryProtocol[AsyncSession],
-    active_only: bool = Query(True, description="Filter to show only active templates"),
-    limit: int = Query(100, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
+    active_only: Annotated[bool, Query(True, description="Filter to show only active templates")],  # noqa: FBT003
+    limit: Annotated[int, Query(100, ge=1, le=1000)],
+    offset: Annotated[int, Query(0, ge=0)],
 ) -> TemplateListResponse:
     try:
         async with template_repository.context() as session:
@@ -65,19 +66,18 @@ async def list_templates(
 @router.get("/{template_id}")
 async def get_template_details(
     template_id: str,
-    current_user: Annotated[User, Depends(get_current_user)],
+    _: Annotated[User, Depends(get_current_user)],
     template_repository: TemplateRepositoryProtocol[AsyncSession],
 ) -> TemplateDetailsResponse:
     try:
-        from uuid import UUID
-
         template_uuid = UUID(template_id)
 
         async with template_repository.context() as session:
             template = await template_repository.get_by_id(session, template_uuid)
 
             if template is None:
-                raise TemplateNotFoundError(f"Template not found: {template_id}")
+                error_message = f"Template not found: {template_id}"
+                raise TemplateNotFoundError(error_message)
 
             fields = await template_repository.get_fields(session, template_uuid)
 

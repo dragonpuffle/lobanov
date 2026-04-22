@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lobanov.app.api.v1.dependencies import get_current_user
 from lobanov.app.api.v1.medical_documents.dto import (
-    ConfirmDocumentRequest,
     ConfirmDocumentResponse,
     ExportDocumentRequest,
     ExportDocumentResponse,
@@ -64,7 +63,6 @@ class RequiredFieldsNotFilledError(MedicalDocumentHandlerError):
 async def generate_document(
     session_id: str,
     request: GenerateDocumentRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
     generate_document_use_case: GenerateMedicalDocument[AsyncSession],
 ) -> GenerateDocumentResponse:
     try:
@@ -116,7 +114,6 @@ async def generate_document(
 @router.get("")
 async def get_document(
     session_id: str,
-    current_user: Annotated[User, Depends(get_current_user)],
     medical_document_repository: MedicalDocumentRepositoryProtocol[AsyncSession],
     template_repository: TemplateRepositoryProtocol[AsyncSession],
     review_document_use_case: ReviewMedicalDocument[AsyncSession],
@@ -128,11 +125,13 @@ async def get_document(
             document = await medical_document_repository.get_by_session_id(session, session_uuid)
 
             if document is None:
-                raise MedicalDocumentNotFoundError(f"Document not found for session {session_id}")
+                error_message = f"Document not found for session {session_id}"
+                raise MedicalDocumentNotFoundError(error_message)
 
             template = await template_repository.get_by_id(session, document.template_id)
             if template is None:
-                raise TemplateNotFoundError(f"Template not found for document {document.id}")
+                error_message = f"Template not found for document {document.id}"
+                raise TemplateNotFoundError(error_message)
 
             review_result = await review_document_use_case.execute(document.id)
 
@@ -193,7 +192,7 @@ async def update_field(
     session_id: str,
     field_id: str,
     request: UpdateFieldRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    _: Annotated[User, Depends(get_current_user)],
     medical_document_repository: MedicalDocumentRepositoryProtocol[AsyncSession],
     update_field_use_case: UpdateDocumentField[AsyncSession],
 ) -> UpdateFieldResponse:
@@ -205,7 +204,8 @@ async def update_field(
             document = await medical_document_repository.get_by_session_id(session, session_uuid)
 
             if document is None:
-                raise MedicalDocumentNotFoundError(f"Document not found for session {session_id}")
+                error_message = f"Document not found for session {session_id}"
+                raise MedicalDocumentNotFoundError(error_message)
 
             validation_result = await update_field_use_case.execute(
                 document_id=document.id,
@@ -260,7 +260,7 @@ async def update_field(
 @router.get("/validate")
 async def validate_document(
     session_id: str,
-    current_user: Annotated[User, Depends(get_current_user)],
+    _: Annotated[User, Depends(get_current_user)],
     medical_document_repository: MedicalDocumentRepositoryProtocol[AsyncSession],
     validate_required_fields_use_case: ValidateRequiredFields[AsyncSession],
 ) -> ValidateDocumentResponse:
@@ -271,7 +271,8 @@ async def validate_document(
             document = await medical_document_repository.get_by_session_id(session, session_uuid)
 
             if document is None:
-                raise MedicalDocumentNotFoundError(f"Document not found for session {session_id}")
+                error_message = f"Document not found for session {session_id}"
+                raise MedicalDocumentNotFoundError(error_message)
 
             validation_result = await validate_required_fields_use_case.execute(
                 prev_session=session,
@@ -315,8 +316,7 @@ async def validate_document(
 @router.post("/confirm")
 async def confirm_document(
     session_id: str,
-    request: ConfirmDocumentRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    _: Annotated[User, Depends(get_current_user)],
     medical_document_repository: MedicalDocumentRepositoryProtocol[AsyncSession],
     confirm_document_use_case: ConfirmDocument[AsyncSession],
 ) -> ConfirmDocumentResponse:
@@ -327,7 +327,8 @@ async def confirm_document(
             document = await medical_document_repository.get_by_session_id(session, session_uuid)
 
             if document is None:
-                raise MedicalDocumentNotFoundError(f"Document not found for session {session_id}")
+                error_message = f"Document not found for session {session_id}"
+                raise MedicalDocumentNotFoundError(error_message)
 
             confirmed_document = await confirm_document_use_case.execute(document.id)
 
@@ -373,7 +374,7 @@ async def confirm_document(
 async def export_document(
     session_id: str,
     request: ExportDocumentRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    _: Annotated[User, Depends(get_current_user)],
     medical_document_repository: MedicalDocumentRepositoryProtocol[AsyncSession],
     save_document_use_case: SaveDocument[AsyncSession],
 ) -> ExportDocumentResponse:
@@ -384,7 +385,8 @@ async def export_document(
             document = await medical_document_repository.get_by_session_id(session, session_uuid)
 
             if document is None:
-                raise MedicalDocumentNotFoundError(f"Document not found for session {session_id}")
+                error_message = f"Document not found for session {session_id}"
+                raise MedicalDocumentNotFoundError(error_message)
 
             file_path = await save_document_use_case.execute(
                 document_id=document.id,

@@ -71,6 +71,7 @@ class UploadAudio[SessionT]:
 
             updated_session = DocumentationSession(
                 id=documentation_session.id,
+                template_id=documentation_session.template_id,
                 user_id=documentation_session.user_id,
                 status=DocumentationSessionStatus.AUDIO_UPLOADED,
                 created_at=documentation_session.created_at,

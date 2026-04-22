@@ -1,15 +1,12 @@
 from io import BytesIO
-from typing import Annotated
 from uuid import UUID
 
 import aiofiles
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lobanov.app.api.v1.audio.dto import AudioUploadResponse
-from lobanov.app.api.v1.dependencies import get_current_user
-from lobanov.domain.entities.user import User
 from lobanov.protocols.repositories import AudioRecordRepositoryProtocol
 from lobanov.usecases.audio import UploadAudio
 
@@ -36,7 +33,6 @@ class AudioUploadFailedError(AudioHandlerError):
 async def upload_audio(
     session_id: str,
     file: UploadFile,
-    current_user: Annotated[User, Depends(get_current_user)],
     upload_audio_use_case: UploadAudio[AsyncSession],
 ) -> AudioUploadResponse:
     try:
@@ -84,7 +80,6 @@ async def upload_audio(
 @router.get("")
 async def get_audio(
     session_id: str,
-    current_user: Annotated[User, Depends(get_current_user)],
     audio_record_repository: AudioRecordRepositoryProtocol[AsyncSession],
 ) -> FileResponse:
     try:
@@ -94,12 +89,14 @@ async def get_audio(
             audio_record = await audio_record_repository.get_by_session_id(session, session_uuid)
 
             if audio_record is None:
-                raise AudioNotFoundError(f"Audio not found for session {session_id}")
+                error_message = f"Audio not found for session {session_id}"
+                raise AudioNotFoundError(error_message)
 
             file_path = audio_record.file_path
 
             if not await aiofiles.os.path.exists(file_path):
-                raise AudioNotFoundError(f"Audio file not found at {file_path}")
+                error_message = f"Audio file not found at {file_path}"
+                raise AudioNotFoundError(error_message)
 
             return FileResponse(
                 path=file_path,

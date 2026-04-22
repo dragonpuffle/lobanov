@@ -39,14 +39,19 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     )
 
 
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    logger.warning(
-        f"HTTP exception: {exc.status_code} - {exc.detail}",
-        extra={"path": request.url.path, "status_code": exc.status_code},
-    )
+async def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    if isinstance(exc, HTTPException):
+        logger.warning(
+            f"HTTP exception: {exc.status_code} - {exc.detail}",
+            extra={"path": request.url.path, "status_code": exc.status_code},
+        )
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+        )
     return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail},
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Internal server error"},
     )
 
 

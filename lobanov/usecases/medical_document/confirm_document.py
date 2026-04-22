@@ -85,6 +85,7 @@ class ConfirmDocument[SessionT]:
             if documentation_session is not None:
                 updated_session = DocumentationSession(
                     id=documentation_session.id,
+                    template_id=documentation_session.template_id,
                     user_id=documentation_session.user_id,
                     status=DocumentationSessionStatus.CONFIRMED,
                     created_at=documentation_session.created_at,

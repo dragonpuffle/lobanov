@@ -66,9 +66,9 @@ async def create_session(
 async def get_sessions(
     current_user: Annotated[User, Depends(get_current_user)],
     get_user_sessions_use_case: GetUserSessions[AsyncSession],
-    limit: int = Query(100, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
-    status_filter: DocumentationSessionStatus | None = Query(None, alias="status"),
+    limit: Annotated[int, Query(100, ge=1, le=1000)],
+    offset: Annotated[int, Query(0, ge=0)],
+    status_filter: Annotated[DocumentationSessionStatus | None, Query(None, alias="status")],
 ) -> SessionListResponse:
     try:
         sessions = await get_user_sessions_use_case.execute(

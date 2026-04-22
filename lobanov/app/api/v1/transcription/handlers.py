@@ -41,7 +41,6 @@ class TranscriptNotFoundError(TranscriptionHandlerError):
 async def transcribe_audio(
     session_id: str,
     request: TranscribeRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
     background_tasks: BackgroundTasks,
     process_transcription_bg_task: ProcessTranscriptionBackgroundTask[AsyncSession],
 ) -> TranscribeResponse:
@@ -96,7 +95,7 @@ async def transcribe_audio(
 @router.get("/transcript")
 async def get_transcript(
     session_id: str,
-    current_user: Annotated[User, Depends(get_current_user)],
+    _: Annotated[User, Depends(get_current_user)],
     transcript_repository: TranscriptRepositoryProtocol[AsyncSession],
 ) -> TranscriptResponse:
     try:
@@ -106,7 +105,8 @@ async def get_transcript(
             transcript = await transcript_repository.get_by_session_id(session, session_uuid)
 
             if transcript is None:
-                raise TranscriptNotFoundError(f"Transcript not found for session {session_id}")
+                error_message = f"Transcript not found for session {session_id}"
+                raise TranscriptNotFoundError(error_message)
 
             return TranscriptResponse(
                 id=transcript.id,
