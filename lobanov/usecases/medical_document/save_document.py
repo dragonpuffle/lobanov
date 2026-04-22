@@ -26,13 +26,13 @@ class TranscriptNotFoundError(Exception):
     pass
 
 
-class SaveDocument[sessionT]:
+class SaveDocument[SessionT]:
     def __init__(
         self,
-        medical_document_repository: MedicalDocumentRepositoryProtocol[sessionT],
-        transcript_repository: TranscriptRepositoryProtocol[sessionT],
-        clinical_fact_repository: ClinicalFactRepositoryProtocol[sessionT],
-        template_repository: TemplateRepositoryProtocol[sessionT],
+        medical_document_repository: MedicalDocumentRepositoryProtocol[SessionT],
+        transcript_repository: TranscriptRepositoryProtocol[SessionT],
+        clinical_fact_repository: ClinicalFactRepositoryProtocol[SessionT],
+        template_repository: TemplateRepositoryProtocol[SessionT],
         file_storage: FileStorageProtocol,
     ):
         self.medical_document_repository = medical_document_repository

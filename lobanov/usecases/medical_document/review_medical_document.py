@@ -31,14 +31,14 @@ class TranscriptNotFoundError(Exception):
     pass
 
 
-class ReviewMedicalDocument[sessionT]:
+class ReviewMedicalDocument[SessionT]:
     def __init__(
         self,
-        medical_document_repository: MedicalDocumentRepositoryProtocol[sessionT],
-        transcript_repository: TranscriptRepositoryProtocol[sessionT],
-        clinical_fact_repository: ClinicalFactRepositoryProtocol[sessionT],
-        template_repository: TemplateRepositoryProtocol[sessionT],
-        validate_required_fields: ValidateRequiredFields[sessionT],
+        medical_document_repository: MedicalDocumentRepositoryProtocol[SessionT],
+        transcript_repository: TranscriptRepositoryProtocol[SessionT],
+        clinical_fact_repository: ClinicalFactRepositoryProtocol[SessionT],
+        template_repository: TemplateRepositoryProtocol[SessionT],
+        validate_required_fields: ValidateRequiredFields[SessionT],
     ):
         self.medical_document_repository = medical_document_repository
         self.transcript_repository = transcript_repository

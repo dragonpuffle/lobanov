@@ -28,12 +28,12 @@ class RequiredFieldsNotFilledError(Exception):
     pass
 
 
-class ConfirmDocument[sessionT]:
+class ConfirmDocument[SessionT]:
     def __init__(
         self,
-        medical_document_repository: MedicalDocumentRepositoryProtocol[sessionT],
-        session_repository: DocumentationSessionRepositoryProtocol[sessionT],
-        validate_required_fields: ValidateRequiredFields[sessionT],
+        medical_document_repository: MedicalDocumentRepositoryProtocol[SessionT],
+        session_repository: DocumentationSessionRepositoryProtocol[SessionT],
+        validate_required_fields: ValidateRequiredFields[SessionT],
     ):
         self.medical_document_repository = medical_document_repository
         self.session_repository = session_repository

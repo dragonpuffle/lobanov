@@ -8,11 +8,11 @@ class UserNotFoundError(Exception):
     pass
 
 
-class GetUserSessions[sessionT]:
+class GetUserSessions[SessionT]:
     def __init__(
         self,
-        user_repository: UserRepositoryProtocol[sessionT],
-        session_repository: DocumentationSessionRepositoryProtocol[sessionT],
+        user_repository: UserRepositoryProtocol[SessionT],
+        session_repository: DocumentationSessionRepositoryProtocol[SessionT],
     ):
         self.user_repository = user_repository
         self.session_repository = session_repository

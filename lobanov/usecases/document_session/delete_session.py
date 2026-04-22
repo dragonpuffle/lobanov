@@ -28,17 +28,17 @@ class SessionCannotBeDeletedError(Exception):
 
 
 @dataclass
-class DeleteSessionRepositories[sessionT]:
-    user_repository: UserRepositoryProtocol[sessionT]
-    session_repository: DocumentationSessionRepositoryProtocol[sessionT]
-    audio_record_repository: AudioRecordRepositoryProtocol[sessionT]
-    transcript_repository: TranscriptRepositoryProtocol[sessionT]
-    clinical_fact_repository: ClinicalFactRepositoryProtocol[sessionT]
-    medical_document_repository: MedicalDocumentRepositoryProtocol[sessionT]
+class DeleteSessionRepositories[SessionT]:
+    user_repository: UserRepositoryProtocol[SessionT]
+    session_repository: DocumentationSessionRepositoryProtocol[SessionT]
+    audio_record_repository: AudioRecordRepositoryProtocol[SessionT]
+    transcript_repository: TranscriptRepositoryProtocol[SessionT]
+    clinical_fact_repository: ClinicalFactRepositoryProtocol[SessionT]
+    medical_document_repository: MedicalDocumentRepositoryProtocol[SessionT]
 
 
-class DeleteSession[sessionT]:
-    def __init__(self, repositories: DeleteSessionRepositories[sessionT]):
+class DeleteSession[SessionT]:
+    def __init__(self, repositories: DeleteSessionRepositories[SessionT]):
         self.repositories = repositories
 
     async def execute(

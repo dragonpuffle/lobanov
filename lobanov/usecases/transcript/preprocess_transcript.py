@@ -14,16 +14,16 @@ class TextPreprocessingError(Exception):
     pass
 
 
-class PreprocessTranscript[sessionT]:
+class PreprocessTranscript[SessionT]:
     def __init__(
         self,
-        transcript_repository: TranscriptRepositoryProtocol[sessionT],
+        transcript_repository: TranscriptRepositoryProtocol[SessionT],
         text_processing_service: TextProcessingProtocol,
     ):
         self.transcript_repository = transcript_repository
         self.text_processing_service = text_processing_service
 
-    async def execute(self, session: sessionT, transcript_id: UUID) -> Transcript:
+    async def execute(self, session: SessionT, transcript_id: UUID) -> Transcript:
         transcript = await self.transcript_repository.get_by_id(session, transcript_id)
         if transcript is None:
             error_message = f"Transcript with id {transcript_id} not found"

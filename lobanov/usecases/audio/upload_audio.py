@@ -20,11 +20,11 @@ class AudioUploadError(Exception):
     pass
 
 
-class UploadAudio[sessionT]:
+class UploadAudio[SessionT]:
     def __init__(
         self,
-        session_repository: DocumentationSessionRepositoryProtocol[sessionT],
-        audio_record_repository: AudioRecordRepositoryProtocol[sessionT],
+        session_repository: DocumentationSessionRepositoryProtocol[SessionT],
+        audio_record_repository: AudioRecordRepositoryProtocol[SessionT],
         file_storage: FileStorageProtocol,
     ):
         self.session_repository = session_repository

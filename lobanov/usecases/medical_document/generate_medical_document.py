@@ -31,13 +31,13 @@ class ClinicalFactsNotFoundError(Exception):
     pass
 
 
-class GenerateMedicalDocument[sessionT]:
+class GenerateMedicalDocument[SessionT]:
     def __init__(
         self,
-        session_repository: DocumentationSessionRepositoryProtocol[sessionT],
-        transcript_repository: TranscriptRepositoryProtocol[sessionT],
-        clinical_fact_repository: ClinicalFactRepositoryProtocol[sessionT],
-        medical_document_repository: MedicalDocumentRepositoryProtocol[sessionT],
+        session_repository: DocumentationSessionRepositoryProtocol[SessionT],
+        transcript_repository: TranscriptRepositoryProtocol[SessionT],
+        clinical_fact_repository: ClinicalFactRepositoryProtocol[SessionT],
+        medical_document_repository: MedicalDocumentRepositoryProtocol[SessionT],
     ):
         self.session_repository = session_repository
         self.transcript_repository = transcript_repository

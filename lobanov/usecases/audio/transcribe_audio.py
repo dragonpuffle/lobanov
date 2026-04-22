@@ -26,12 +26,12 @@ class TranscriptionError(Exception):
     pass
 
 
-class TranscribeAudio[sessionT]:
+class TranscribeAudio[SessionT]:
     def __init__(
         self,
-        session_repository: DocumentationSessionRepositoryProtocol[sessionT],
-        audio_record_repository: AudioRecordRepositoryProtocol[sessionT],
-        transcript_repository: TranscriptRepositoryProtocol[sessionT],
+        session_repository: DocumentationSessionRepositoryProtocol[SessionT],
+        audio_record_repository: AudioRecordRepositoryProtocol[SessionT],
+        transcript_repository: TranscriptRepositoryProtocol[SessionT],
         stt_service: SpeechRecognitionProtocol,
     ):
         self.session_repository = session_repository

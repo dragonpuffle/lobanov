@@ -27,7 +27,7 @@ class TemplateNotFoundError(Exception):
     pass
 
 
-class ValidateRequiredFields[sessionT]:
+class ValidateRequiredFields[SessionT]:
     def __init__(
         self,
         clinical_fact_repository: ClinicalFactRepositoryProtocol,
@@ -64,7 +64,7 @@ class ValidateRequiredFields[sessionT]:
 
     async def execute(
         self,
-        prev_session: sessionT | None,
+        prev_session: SessionT | None,
         document_id: UUID,
         template_id: UUID,
         session_id: UUID,

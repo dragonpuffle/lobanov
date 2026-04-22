@@ -24,14 +24,14 @@ class UserNotFoundError(Exception):
     pass
 
 
-class GetSessionDetails[sessionT]:
+class GetSessionDetails[SessionT]:
     def __init__(
         self,
-        user_repository: UserRepositoryProtocol[sessionT],
-        session_repository: DocumentationSessionRepositoryProtocol[sessionT],
-        audio_record_repository: AudioRecordRepositoryProtocol[sessionT],
-        transcript_repository: TranscriptRepositoryProtocol[sessionT],
-        medical_document_repository: MedicalDocumentRepositoryProtocol[sessionT],
+        user_repository: UserRepositoryProtocol[SessionT],
+        session_repository: DocumentationSessionRepositoryProtocol[SessionT],
+        audio_record_repository: AudioRecordRepositoryProtocol[SessionT],
+        transcript_repository: TranscriptRepositoryProtocol[SessionT],
+        medical_document_repository: MedicalDocumentRepositoryProtocol[SessionT],
     ):
         self.user_repository = user_repository
         self.session_repository = session_repository

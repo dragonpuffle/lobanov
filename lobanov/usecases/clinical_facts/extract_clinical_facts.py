@@ -22,12 +22,12 @@ class ClinicalExtractionError(Exception):
     pass
 
 
-class ExtractClinicalFacts[sessionT]:
+class ExtractClinicalFacts[SessionT]:
     def __init__(
         self,
-        transcript_repository: TranscriptRepositoryProtocol[sessionT],
-        clinical_fact_repository: ClinicalFactRepositoryProtocol[sessionT],
-        template_repository: TemplateRepositoryProtocol[sessionT],
+        transcript_repository: TranscriptRepositoryProtocol[SessionT],
+        clinical_fact_repository: ClinicalFactRepositoryProtocol[SessionT],
+        template_repository: TemplateRepositoryProtocol[SessionT],
         clinical_extraction_service: ClinicalExtractionProtocol,
     ):
         self.transcript_repository = transcript_repository
@@ -35,7 +35,7 @@ class ExtractClinicalFacts[sessionT]:
         self.template_repository = template_repository
         self.clinical_extraction_service = clinical_extraction_service
 
-    async def execute(self, session: sessionT, transcript_id: UUID, template_id: UUID) -> list[ClinicalFact]:
+    async def execute(self, session: SessionT, transcript_id: UUID, template_id: UUID) -> list[ClinicalFact]:
         transcript = await self.transcript_repository.get_by_id(session, transcript_id)
         if transcript is None:
             error_message = f"Transcript with id {transcript_id} not found"

@@ -23,13 +23,13 @@ class InvalidDocumentStateError(Exception):
     pass
 
 
-class UpdateDocumentField[sessionT]:
+class UpdateDocumentField[SessionT]:
     def __init__(
         self,
-        medical_document_repository: MedicalDocumentRepositoryProtocol[sessionT],
-        clinical_fact_repository: ClinicalFactRepositoryProtocol[sessionT],
-        template_repository: TemplateRepositoryProtocol[sessionT],
-        validate_required_fields: ValidateRequiredFields[sessionT],
+        medical_document_repository: MedicalDocumentRepositoryProtocol[SessionT],
+        clinical_fact_repository: ClinicalFactRepositoryProtocol[SessionT],
+        template_repository: TemplateRepositoryProtocol[SessionT],
+        validate_required_fields: ValidateRequiredFields[SessionT],
     ):
         self.medical_document_repository = medical_document_repository
         self.clinical_fact_repository = clinical_fact_repository
