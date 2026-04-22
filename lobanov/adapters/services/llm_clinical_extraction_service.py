@@ -116,6 +116,8 @@ Respond in JSON format with a list of facts."""
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/lobanov/lobanov",
+                "X-Title": "Lobanov Clinical Documentation",
             }
 
             payload = {
@@ -132,7 +134,7 @@ Respond in JSON format with a list of facts."""
 
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(
-                    "https://api.openai.com/v1/chat/completions",
+                    "https://openrouter.ai/api/v1/chat/completions",
                     headers=headers,
                     json=payload,
                 )

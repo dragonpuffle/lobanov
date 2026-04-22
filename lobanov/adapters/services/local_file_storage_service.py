@@ -1,9 +1,12 @@
+import asyncio
 import os
 import shutil
 from io import BytesIO
 from pathlib import Path
 from typing import override
 from uuid import UUID
+
+import aiofiles
 
 from lobanov.protocols.services.file_storage_protocol import FileStorageProtocol
 
@@ -58,8 +61,8 @@ class LocalFileStorageService(FileStorageProtocol):
         file_path = session_dir / filename
 
         try:
-            with open(file_path, "wb") as f:
-                shutil.copyfileobj(file, f)
+            async with aiofiles.open(file_path, "wb") as f:
+                await f.write(file.getvalue())
         except Exception as e:
             err_msg = f"Failed to save audio file: {e}"
             raise FileStorageError(err_msg) from e
@@ -69,7 +72,7 @@ class LocalFileStorageService(FileStorageProtocol):
     @override
     async def get_audio_url(self, file_path: str) -> str:
         path = Path(file_path)
-        if not path.exists():
+        if not await aiofiles.os.path.exists(file_path):
             err_msg = f"File not found: {file_path}"
             raise FileStorageError(err_msg)
         if not path.is_relative_to(self.audio_path):
@@ -79,19 +82,19 @@ class LocalFileStorageService(FileStorageProtocol):
 
     @override
     async def delete_file(self, file_path: str) -> bool:
-        path = Path(file_path)
-        if not path.exists():
+        if not await aiofiles.os.path.exists(file_path):
             return False
 
         try:
-            if path.is_file():
-                path.unlink()
-            elif path.is_dir():
-                shutil.rmtree(path)
-            return True  # noqa: TRY300
+            if await aiofiles.os.path.isfile(file_path):
+                await aiofiles.os.unlink(file_path)
+            elif await aiofiles.os.path.isdir(file_path):
+                await asyncio.to_thread(shutil.rmtree, file_path)
         except Exception as e:
             err_msg = f"Failed to delete file {file_path}: {e}"
             raise FileStorageError(err_msg) from e
+        else:
+            return True
 
     @override
     async def save_document(self, content: str, filename: str, session_id: UUID) -> str:
@@ -103,8 +106,8 @@ class LocalFileStorageService(FileStorageProtocol):
         file_path = session_dir / filename
 
         try:
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(content)
+            async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
+                await f.write(content)
         except Exception as e:
             err_msg = f"Failed to save document: {e}"
             raise FileStorageError(err_msg) from e

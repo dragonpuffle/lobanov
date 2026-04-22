@@ -1,8 +1,8 @@
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import override
 from uuid import uuid4
 
+import aiofiles.os
 from faster_whisper import WhisperModel
 
 from lobanov.domain.entities.transcript import Transcript, TranscriptLanguage
@@ -35,8 +35,7 @@ class WhisperSTTService(SpeechRecognitionProtocol):
 
     @override
     async def transcribe_audio(self, file_path: str, language: str) -> Transcript:
-        file_path_obj = Path(file_path)
-        if not file_path_obj.exists():
+        if not await aiofiles.os.path.exists(file_path):
             err_msg = f"Audio file not found: {file_path}"
             raise SpeechRecognitionError(err_msg)
 
@@ -44,7 +43,7 @@ class WhisperSTTService(SpeechRecognitionProtocol):
             whisper_language = self._parse_language(language)
 
             segments, _ = self.model.transcribe(
-                str(file_path_obj), language=whisper_language, beam_size=5, vad_filter=True, word_timestamps=True
+                file_path, language=whisper_language, beam_size=5, vad_filter=True, word_timestamps=True
             )
 
             full_text = " ".join([segment.text for segment in segments])
