@@ -25,10 +25,10 @@ class InvalidDocumentStateError(Exception):
 class SaveDocument[sessionT]:
     def __init__(
         self,
-        medical_document_repository: MedicalDocumentRepositoryProtocol,
-        transcript_repository: TranscriptRepositoryProtocol,
-        clinical_fact_repository: ClinicalFactRepositoryProtocol,
-        template_repository: TemplateRepositoryProtocol,
+        medical_document_repository: MedicalDocumentRepositoryProtocol[sessionT],
+        transcript_repository: TranscriptRepositoryProtocol[sessionT],
+        clinical_fact_repository: ClinicalFactRepositoryProtocol[sessionT],
+        template_repository: TemplateRepositoryProtocol[sessionT],
         file_storage: FileStorageProtocol,
     ):
         self.medical_document_repository = medical_document_repository
@@ -39,39 +39,39 @@ class SaveDocument[sessionT]:
 
     async def execute(
         self,
-        session: sessionT,
         document_id: UUID,
         format: str = "json",
     ) -> str:
-        document = await self.medical_document_repository.get_by_id(session, document_id)
-        if document is None:
-            error_message = f"Medical document with id {document_id} not found"
-            raise MedicalDocumentNotFoundError(error_message)
+        async with self.medical_document_repository.context() as session:
+            document = await self.medical_document_repository.get_by_id(session, document_id)
+            if document is None:
+                error_message = f"Medical document with id {document_id} not found"
+                raise MedicalDocumentNotFoundError(error_message)
 
-        if document.status != MedicalDocumentStatus.CONFIRMED:
-            error_message = (
-                f"Cannot save document with status {document.status}. Only confirmed documents can be saved."
-            )
-            raise InvalidDocumentStateError(error_message)
+            if document.status != MedicalDocumentStatus.CONFIRMED:
+                error_message = (
+                    f"Cannot save document with status {document.status}. Only confirmed documents can be saved."
+                )
+                raise InvalidDocumentStateError(error_message)
 
-        transcript = await self.transcript_repository.get_by_id(session, document.transcript_id)
-        if transcript is None:
-            error_message = f"Transcript with id {document.transcript_id} not found"
-            raise Exception(error_message)
+            transcript = await self.transcript_repository.get_by_id(session, document.transcript_id)
+            if transcript is None:
+                error_message = f"Transcript with id {document.transcript_id} not found"
+                raise Exception(error_message)
 
-        clinical_facts = await self.clinical_fact_repository.get_by_session_id(session, document.session_id)
-        template_fields = await self.template_repository.get_fields(session, document.template_id)
+            clinical_facts = await self.clinical_fact_repository.get_by_session_id(session, document.session_id)
+            template_fields = await self.template_repository.get_fields(session, document.template_id)
 
-        if format.lower() == "json":
-            content = self._export_to_json(document, transcript, clinical_facts, template_fields)
-            filename = f"document_{document_id}.json"
-        else:
-            error_message = f"Unsupported format: {format}. Only 'json' is supported."
-            raise ValueError(error_message)
+            if format.lower() == "json":
+                content = self._export_to_json(document, transcript, clinical_facts, template_fields)
+                filename = f"document_{document_id}.json"
+            else:
+                error_message = f"Unsupported format: {format}. Only 'json' is supported."
+                raise ValueError(error_message)
 
-        file_path = await self.file_storage.save_document(content, filename, document.session_id)
+            file_path = await self.file_storage.save_document(content, filename, document.session_id)
 
-        return file_path
+            return file_path
 
     def _export_to_json(
         self,

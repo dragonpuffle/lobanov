@@ -17,7 +17,7 @@ class TextPreprocessingError(Exception):
 class PreprocessTranscript[sessionT]:
     def __init__(
         self,
-        transcript_repository: TranscriptRepositoryProtocol,
+        transcript_repository: TranscriptRepositoryProtocol[sessionT],
         text_processing_service: TextProcessingProtocol,
     ):
         self.transcript_repository = transcript_repository

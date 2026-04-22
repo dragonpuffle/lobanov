@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 # pyright: reportUnusedCallResult=false
 """Add consultation protocol template
 
@@ -8,9 +9,6 @@ Create Date: 2026-04-22 16:44:00.000000+03:00
 """
 
 from collections.abc import Sequence
-
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 from alembic import op
 

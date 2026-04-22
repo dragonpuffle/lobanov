@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -26,10 +27,10 @@ class TranscriptNotFoundError(Exception):
 class ReviewMedicalDocument[sessionT]:
     def __init__(
         self,
-        medical_document_repository: MedicalDocumentRepositoryProtocol,
-        transcript_repository: TranscriptRepositoryProtocol,
-        clinical_fact_repository: ClinicalFactRepositoryProtocol,
-        template_repository: TemplateRepositoryProtocol,
+        medical_document_repository: MedicalDocumentRepositoryProtocol[sessionT],
+        transcript_repository: TranscriptRepositoryProtocol[sessionT],
+        clinical_fact_repository: ClinicalFactRepositoryProtocol[sessionT],
+        template_repository: TemplateRepositoryProtocol[sessionT],
         validate_required_fields: ValidateRequiredFields[sessionT],
     ):
         self.medical_document_repository = medical_document_repository
@@ -64,38 +65,39 @@ class ReviewMedicalDocument[sessionT]:
         validation_result: ValidateRequiredFields.DocumentValidationResult
         is_ready_for_confirmation: bool
 
-    async def execute(self, session: sessionT, document_id: UUID) -> DocumentReviewResult:
-        document = await self.medical_document_repository.get_by_id(session, document_id)
-        if document is None:
-            error_message = f"Medical document with id {document_id} not found"
-            raise MedicalDocumentNotFoundError(error_message)
+    async def execute(self, document_id: UUID) -> DocumentReviewResult:
+        async with self.medical_document_repository.context() as session:
+            document = await self.medical_document_repository.get_by_id(session, document_id)
+            if document is None:
+                error_message = f"Medical document with id {document_id} not found"
+                raise MedicalDocumentNotFoundError(error_message)
 
-        transcript = await self.transcript_repository.get_by_id(session, document.transcript_id)
-        if transcript is None:
-            error_message = f"Transcript with id {document.transcript_id} not found"
-            raise TranscriptNotFoundError(error_message)
+            transcript = await self.transcript_repository.get_by_id(session, document.transcript_id)
+            if transcript is None:
+                error_message = f"Transcript with id {document.transcript_id} not found"
+                raise TranscriptNotFoundError(error_message)
 
-        clinical_facts = await self.clinical_fact_repository.get_by_session_id(session, document.session_id)
-        template_fields = await self.template_repository.get_fields(session, document.template_id)
+            clinical_facts = await self.clinical_fact_repository.get_by_session_id(session, document.session_id)
+            template_fields = await self.template_repository.get_fields(session, document.template_id)
 
-        field_values = self._build_field_values(template_fields, clinical_facts)
+            field_values = self._build_field_values(template_fields, clinical_facts)
 
-        validation_result = await self.validate_required_fields.execute(
-            session,
-            document_id,
-            document.template_id,
-            document.session_id,
-        )
+            validation_result = await self.validate_required_fields.execute(
+                prev_session=session,
+                document_id=document_id,
+                template_id=document.template_id,
+                session_id=document.session_id,
+            )
 
-        is_ready_for_confirmation = self._check_ready_for_confirmation(field_values)
+            is_ready_for_confirmation = self._check_ready_for_confirmation(field_values)
 
-        return self.DocumentReviewResult(
-            document=document,
-            transcript=transcript,
-            field_values=field_values,
-            validation_result=validation_result,
-            is_ready_for_confirmation=is_ready_for_confirmation,
-        )
+            return self.DocumentReviewResult(
+                document=document,
+                transcript=transcript,
+                field_values=field_values,
+                validation_result=validation_result,
+                is_ready_for_confirmation=is_ready_for_confirmation,
+            )
 
     def _build_field_values(
         self,

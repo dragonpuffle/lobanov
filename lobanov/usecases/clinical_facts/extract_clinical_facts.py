@@ -25,9 +25,9 @@ class ClinicalExtractionError(Exception):
 class ExtractClinicalFacts[sessionT]:
     def __init__(
         self,
-        transcript_repository: TranscriptRepositoryProtocol,
-        clinical_fact_repository: ClinicalFactRepositoryProtocol,
-        template_repository: TemplateRepositoryProtocol,
+        transcript_repository: TranscriptRepositoryProtocol[sessionT],
+        clinical_fact_repository: ClinicalFactRepositoryProtocol[sessionT],
+        template_repository: TemplateRepositoryProtocol[sessionT],
         clinical_extraction_service: ClinicalExtractionProtocol,
     ):
         self.transcript_repository = transcript_repository
