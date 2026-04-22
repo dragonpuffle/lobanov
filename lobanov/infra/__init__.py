@@ -4,7 +4,9 @@ from .configs import CORSConfig as CORSConfig
 from .configs import CeleryConfig as CeleryConfig
 from .configs import JWTConfig as JWTConfig
 from .configs import NLPConfig as NLPConfig
-from .configs import PostgresConfig as PostgresConfig
 from .configs import RateLimitConfig as RateLimitConfig
 from .configs import STTConfig as STTConfig
 from .configs import StorageConfig as StorageConfig
+from .postgres import PostgresConfig as PostgresConfig
+from .postgres import provide_async_engine as provide_async_engine
+from .postgres import provide_async_session_factory as provide_async_session_factory

@@ -9,11 +9,11 @@ from lobanov.infra.configs import (
     CeleryConfig,
     JWTConfig,
     NLPConfig,
-    PostgresConfig,
     RateLimitConfig,
     STTConfig,
     StorageConfig,
 )
+from lobanov.infra.postgres import PostgresConfig
 
 
 class GlobalConfig(BaseSettings):

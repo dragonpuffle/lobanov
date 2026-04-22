@@ -8,18 +8,6 @@ class AppConfig(BaseModel):
     log_level: str = Field(description="Logging level")
 
 
-class PostgresConfig(BaseModel):
-    host: str = Field(description="PostgreSQL host")
-    port: int = Field(description="PostgreSQL port")
-    username: str = Field(description="PostgreSQL username")
-    password: str = Field(description="PostgreSQL password")
-    database: str = Field(description="PostgreSQL database name")
-
-    @property
-    def url(self) -> str:
-        return f"postgresql+asyncpg://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}"
-
-
 class JWTConfig(BaseModel):
     secret_key: str = Field(description="JWT secret key")
     algorithm: str = Field(description="JWT algorithm")
