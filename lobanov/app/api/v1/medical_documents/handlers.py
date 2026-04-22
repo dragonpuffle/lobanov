@@ -59,7 +59,13 @@ class RequiredFieldsNotFilledError(MedicalDocumentHandlerError):
     pass
 
 
-@router.post("/generate", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/generate",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Generate medical document",
+    description="Generates a medical document from the transcript and clinical facts."
+    " The session must have a completed transcription and extracted clinical facts.",
+)
 async def generate_document(
     session_id: str,
     request: GenerateDocumentRequest,

@@ -26,13 +26,17 @@ class TemplateNotFoundError(TemplateHandlerError):
     pass
 
 
-@router.get("")
+@router.get(
+    "",
+    summary="List medical document templates",
+    description="Retrieves a paginated list of medical document templates. Can filter to show only active templates.",
+)
 async def list_templates(
     _: Annotated[User, Depends(get_current_user)],
     template_repository: TemplateRepositoryProtocol[AsyncSession],
     active_only: Annotated[bool, Query(True, description="Filter to show only active templates")],  # noqa: FBT003
-    limit: Annotated[int, Query(100, ge=1, le=1000)],
-    offset: Annotated[int, Query(0, ge=0)],
+    limit: Annotated[int, Query(100, ge=1, le=1000, description="Maximum number of templates to return (1-1000)")],
+    offset: Annotated[int, Query(0, ge=0, description="Number of templates to skip for pagination")],
 ) -> TemplateListResponse:
     try:
         async with template_repository.context() as session:
@@ -63,7 +67,11 @@ async def list_templates(
         ) from e
 
 
-@router.get("/{template_id}")
+@router.get(
+    "/{template_id}",
+    summary="Get template details",
+    description="Retrieves detailed information about a specific medical document template, including all its fields.",
+)
 async def get_template_details(
     template_id: str,
     _: Annotated[User, Depends(get_current_user)],

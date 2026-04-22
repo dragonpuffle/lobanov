@@ -37,7 +37,13 @@ class TranscriptNotFoundError(TranscriptionHandlerError):
     pass
 
 
-@router.post("/transcribe", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/transcribe",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Start audio transcription",
+    description="Starts the transcription process for the audio file associated with a session."
+    " The transcription runs in the background. The session must have an uploaded audio file.",
+)
 async def transcribe_audio(
     session_id: str,
     request: TranscribeRequest,
@@ -92,7 +98,12 @@ async def transcribe_audio(
         ) from e
 
 
-@router.get("/transcript")
+@router.get(
+    "/transcript",
+    summary="Get transcript for a session",
+    description="Retrieves the transcript text and metadata for a session."
+    " The transcript must exist (transcription must be completed).",
+)
 async def get_transcript(
     session_id: str,
     _: Annotated[User, Depends(get_current_user)],

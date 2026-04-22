@@ -34,7 +34,13 @@ class SessionNotFoundError(SessionHandlerError):
     pass
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new documentation session",
+    description="Creates a new documentation session for the authenticated user."
+    " A session represents a complete workflow from audio upload to document confirmation.",
+)
 async def create_session(
     request: CreateSessionRequest,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -62,13 +68,25 @@ async def create_session(
         ) from e
 
 
-@router.get("")
+@router.get(
+    "",
+    summary="List user's documentation sessions",
+    description="Retrieves a paginated list of documentation sessions for the authenticated user."
+    " Supports filtering by session status.",
+)
 async def get_sessions(
     current_user: Annotated[User, Depends(get_current_user)],
     get_user_sessions_use_case: GetUserSessions[AsyncSession],
-    limit: Annotated[int, Query(100, ge=1, le=1000)],
-    offset: Annotated[int, Query(0, ge=0)],
-    status_filter: Annotated[DocumentationSessionStatus | None, Query(None, alias="status")],
+    limit: Annotated[int, Query(100, ge=1, le=1000, description="Maximum number of sessions to return (1-1000)")],
+    offset: Annotated[int, Query(0, ge=0, description="Number of sessions to skip for pagination")],
+    status_filter: Annotated[
+        DocumentationSessionStatus | None,
+        Query(
+            None,
+            alias="status",
+            description="Filter sessions by status (created, audio_uploaded, transcribed, draft_created, confirmed)",
+        ),
+    ],
 ) -> SessionListResponse:
     try:
         sessions = await get_user_sessions_use_case.execute(
@@ -103,7 +121,12 @@ async def get_sessions(
         ) from e
 
 
-@router.get("/{session_id}")
+@router.get(
+    "/{session_id}",
+    summary="Get session details",
+    description="Retrieves detailed information about a specific documentation session,"
+    " including the presence of audio, transcript, and medical document.",
+)
 async def get_session_details(
     session_id: str,
     current_user: Annotated[User, Depends(get_current_user)],

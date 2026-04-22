@@ -31,20 +31,26 @@ class StorageHealthResponse(HealthCheckResponse):
         self.storage_path = storage_path
 
 
-@router.get("")
+@router.get(
+    "",
+    summary="Basic health check",
+    description="Returns the basic health status of the API service.",
+)
 async def health_check() -> dict[str, str]:
-    """Basic health check endpoint."""
     return {
         "status": "healthy",
         "timestamp": datetime.now(tz=UTC).isoformat(),
     }
 
 
-@router.get("/db")
+@router.get(
+    "/db",
+    summary="Database health check",
+    description="Checks the connectivity and latency of the database connection.",
+)
 async def database_health_check(
     session_factory: type[AsyncSession],
 ) -> dict[str, str | float]:
-    """Check database connectivity."""
     start_time = datetime.now(tz=UTC)
 
     try:
@@ -73,11 +79,42 @@ async def database_health_check(
         ) from e
 
 
-@router.get("/storage")
+@router.get(
+    "/storage",
+    summary="Storage health check",
+    description="Checks the availability and write permissions of the file storage service.",
+    responses={
+        status.HTTP_200_OK: {
+            "description": "Storage is available and writable",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "healthy",
+                        "timestamp": "2024-01-15T10:00:00Z",
+                        "storage_status": "available",
+                        "storage_path": "/path/to/storage",
+                    }
+                }
+            },
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "description": "Storage is unavailable or read-only",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "unhealthy",
+                        "timestamp": "2024-01-15T10:00:00Z",
+                        "storage_status": "unavailable",
+                        "error": "Storage path does not exist: /path/to/storage",
+                    }
+                }
+            },
+        },
+    },
+)
 async def storage_health_check(
     storage_service: FileStorageProtocol,
 ) -> dict[str, str | None]:
-    """Check storage availability."""
     try:
         storage_path = None
 

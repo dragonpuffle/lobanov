@@ -29,7 +29,13 @@ class AudioUploadFailedError(AudioHandlerError):
     pass
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload audio file for a session",
+    description="Uploads an audio file to a documentation session. The session must be in 'created' state."
+    " Supports common audio formats (MP3, WAV, M4A, etc.).",
+)
 async def upload_audio(
     session_id: str,
     file: UploadFile,
@@ -77,7 +83,11 @@ async def upload_audio(
         ) from e
 
 
-@router.get("")
+@router.get(
+    "",
+    summary="Download audio file for a session",
+    description="Retrieves and downloads the audio file associated with a documentation session.",
+)
 async def get_audio(
     session_id: str,
     audio_record_repository: AudioRecordRepositoryProtocol[AsyncSession],
