@@ -92,9 +92,9 @@ class ClinicalFactRepository(ClinicalFactRepositoryProtocol[AsyncSession]):
             error_message = f"ClinicalFact with id {clinical_fact.id} not found"
             raise ValueError(error_message)
 
-        session_model.session_id = clinical_fact.session_id
-        session_model.transcript_id = clinical_fact.transcript_id
-        session_model.template_field_id = clinical_fact.template_field_id
+        session_model.session_id = clinical_fact.session_id  # type: ignore[assignment]
+        session_model.transcript_id = clinical_fact.transcript_id  # type: ignore[assignment]
+        session_model.template_field_id = clinical_fact.template_field_id  # type: ignore[assignment]
         session_model.is_updated_by_user = clinical_fact.is_updated_by_user
         session_model.value = clinical_fact.value
         session_model.confidence = clinical_fact.confidence

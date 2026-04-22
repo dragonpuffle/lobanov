@@ -1,4 +1,4 @@
-# ruff: noqa: E501
+# ruff: noqa: E501, W291
 # pyright: reportUnusedCallResult=false
 """Add consultation protocol template
 

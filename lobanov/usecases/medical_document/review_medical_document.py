@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 from lobanov.domain.entities.clinical_fact import ClinicalFact
 from lobanov.domain.entities.medical_document import MedicalDocument
@@ -14,6 +14,13 @@ from lobanov.protocols.repositories import (
     TranscriptRepositoryProtocol,
 )
 from lobanov.usecases.medical_document.validate_required_fields import ValidateRequiredFields
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+
+HIGH_CONFIDENCE_THRESHOLD = 0.8
+LOW_CONFIDENCE_THRESHOLD = 0.5
 
 
 class MedicalDocumentNotFoundError(Exception):
@@ -133,7 +140,7 @@ class ReviewMedicalDocument[sessionT]:
 
                 if best_fact.is_updated_by_user:
                     status = ValidateRequiredFields.FieldValueStatus.USER_EDITED
-                elif confidence >= 0.8:
+                elif confidence >= HIGH_CONFIDENCE_THRESHOLD:
                     status = ValidateRequiredFields.FieldValueStatus.AUTO_FILLED
                 else:
                     status = ValidateRequiredFields.FieldValueStatus.DOUBTFUL
@@ -172,7 +179,7 @@ class ReviewMedicalDocument[sessionT]:
             if (
                 field_value.status == ValidateRequiredFields.FieldValueStatus.DOUBTFUL
                 and field_value.confidence is not None
-                and field_value.confidence < 0.5
+                and field_value.confidence < LOW_CONFIDENCE_THRESHOLD
             ):
                 return False
 

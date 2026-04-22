@@ -109,11 +109,9 @@ class UpdateDocumentField[sessionT]:
             )
             await self.medical_document_repository.update(session, updated_document)
 
-            validation_result = await self.validate_required_fields.execute(
+            return await self.validate_required_fields.execute(
                 prev_session=session,
                 document_id=document_id,
                 template_id=document.template_id,
                 session_id=document.session_id,
             )
-
-            return validation_result

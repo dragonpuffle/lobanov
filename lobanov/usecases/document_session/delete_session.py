@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from uuid import UUID
 
 from lobanov.domain import DocumentationSessionStatus
@@ -26,71 +27,86 @@ class SessionCannotBeDeletedError(Exception):
     pass
 
 
+@dataclass
+class DeleteSessionRepositories[sessionT]:
+    user_repository: UserRepositoryProtocol[sessionT]
+    session_repository: DocumentationSessionRepositoryProtocol[sessionT]
+    audio_record_repository: AudioRecordRepositoryProtocol[sessionT]
+    transcript_repository: TranscriptRepositoryProtocol[sessionT]
+    clinical_fact_repository: ClinicalFactRepositoryProtocol[sessionT]
+    medical_document_repository: MedicalDocumentRepositoryProtocol[sessionT]
+
+
 class DeleteSession[sessionT]:
-    def __init__(
-        self,
-        user_repository: UserRepositoryProtocol[sessionT],
-        session_repository: DocumentationSessionRepositoryProtocol[sessionT],
-        audio_record_repository: AudioRecordRepositoryProtocol[sessionT],
-        transcript_repository: TranscriptRepositoryProtocol[sessionT],
-        clinical_fact_repository: ClinicalFactRepositoryProtocol[sessionT],
-        medical_document_repository: MedicalDocumentRepositoryProtocol[sessionT],
-    ):
-        self.user_repository = user_repository
-        self.session_repository = session_repository
-        self.audio_record_repository = audio_record_repository
-        self.transcript_repository = transcript_repository
-        self.clinical_fact_repository = clinical_fact_repository
-        self.medical_document_repository = medical_document_repository
+    def __init__(self, repositories: DeleteSessionRepositories[sessionT]):
+        self.repositories = repositories
 
     async def execute(
         self,
         session_id: UUID,
         user_id: UUID,
     ) -> None:
-        async with self.user_repository.context() as session:
-            user = await self.user_repository.get_by_id(session, user_id)
-            if user is None:
-                error_message = f"User with id {user_id} not found"
-                raise UserNotFoundError(error_message)
+        async with self.repositories.user_repository.context() as session:
+            await self._validate_user(session, user_id)
+            await self._get_and_validate_session(session, session_id, user_id)
+            await self._delete_session_data(session, session_id, user_id)
 
-            if not user.is_active:
-                error_message = f"User with id {user_id} is not active"
-                raise ValueError(error_message)
+    async def _validate_user(self, session, user_id: UUID) -> None:
+        user = await self.repositories.user_repository.get_by_id(session, user_id)
+        if user is None:
+            error_message = f"User with id {user_id} not found"
+            raise UserNotFoundError(error_message)
 
-            documentation_session = await self.session_repository.get_by_id(session, session_id)
-            if documentation_session is None:
-                error_message = f"Session with id {session_id} not found"
-                raise SessionNotFoundError(error_message)
+        if not user.is_active:
+            error_message = f"User with id {user_id} is not active"
+            raise ValueError(error_message)
 
-            if documentation_session.user_id != user_id:
-                error_message = f"Session with id {session_id} does not belong to user with id {user_id}"
-                raise ValueError(error_message)
+    async def _get_and_validate_session(self, session, session_id: UUID, user_id: UUID) -> None:
+        documentation_session = await self.repositories.session_repository.get_by_id(session, session_id)
+        if documentation_session is None:
+            error_message = f"Session with id {session_id} not found"
+            raise SessionNotFoundError(error_message)
 
-            if documentation_session.status == DocumentationSessionStatus.CONFIRMED:
-                error_message = f"Session with id {session_id} is confirmed and cannot be deleted"
-                raise SessionCannotBeDeletedError(error_message)
+        if documentation_session.user_id != user_id:
+            error_message = f"Session with id {session_id} does not belong to user with id {user_id}"
+            raise ValueError(error_message)
 
-            audio_record = await self.audio_record_repository.get_by_session_id(session, session_id)
-            if audio_record is not None:
-                await self.audio_record_repository.delete(session, audio_record.id)
-                logger.info(f"Deleted audio record {audio_record.id} for session {session_id}")
+        if documentation_session.status == DocumentationSessionStatus.CONFIRMED:
+            error_message = f"Session with id {session_id} is confirmed and cannot be deleted"
+            raise SessionCannotBeDeletedError(error_message)
 
-            transcript = await self.transcript_repository.get_by_session_id(session, session_id)
-            if transcript is not None:
-                await self.transcript_repository.delete(session, transcript.id)
-                logger.info(f"Deleted transcript {transcript.id} for session {session_id}")
+    async def _delete_session_data(self, session, session_id: UUID, user_id: UUID) -> None:
+        await self._delete_medical_document(session, session_id)
+        await self._delete_clinical_facts(session, session_id)
+        await self._delete_transcript(session, session_id)
+        await self._delete_audio_record(session, session_id)
+        await self._delete_session(session, session_id, user_id)
 
-            clinical_facts = await self.clinical_fact_repository.get_by_session_id(session, session_id)
-            for fact in clinical_facts:
-                await self.clinical_fact_repository.delete(session, fact.id)
-            if clinical_facts:
-                logger.info(f"Deleted {len(clinical_facts)} clinical facts for session {session_id}")
+    async def _delete_medical_document(self, session, session_id: UUID) -> None:
+        medical_document = await self.repositories.medical_document_repository.get_by_session_id(session, session_id)
+        if medical_document is not None:
+            await self.repositories.medical_document_repository.delete(session, medical_document.id)
+            logger.info("Deleted medical document %s for session %s", medical_document.id, session_id)
 
-            medical_document = await self.medical_document_repository.get_by_session_id(session, session_id)
-            if medical_document is not None:
-                await self.medical_document_repository.delete(session, medical_document.id)
-                logger.info(f"Deleted medical document {medical_document.id} for session {session_id}")
+    async def _delete_clinical_facts(self, session, session_id: UUID) -> None:
+        clinical_facts = await self.repositories.clinical_fact_repository.get_by_session_id(session, session_id)
+        for fact in clinical_facts:
+            await self.repositories.clinical_fact_repository.delete(session, fact.id)
+        if clinical_facts:
+            logger.info("Deleted %d clinical facts for session %s", len(clinical_facts), session_id)
 
-            await self.session_repository.delete(session, session_id)
-            logger.info(f"Deleted session {session_id} for user {user_id}")
+    async def _delete_transcript(self, session, session_id: UUID) -> None:
+        transcript = await self.repositories.transcript_repository.get_by_session_id(session, session_id)
+        if transcript is not None:
+            await self.repositories.transcript_repository.delete(session, transcript.id)
+            logger.info("Deleted transcript %s for session %s", transcript.id, session_id)
+
+    async def _delete_audio_record(self, session, session_id: UUID) -> None:
+        audio_record = await self.repositories.audio_record_repository.get_by_session_id(session, session_id)
+        if audio_record is not None:
+            await self.repositories.audio_record_repository.delete(session, audio_record.id)
+            logger.info("Deleted audio record %s for session %s", audio_record.id, session_id)
+
+    async def _delete_session(self, session, session_id: UUID, user_id: UUID) -> None:
+        await self.repositories.session_repository.delete(session, session_id)
+        logger.info("Deleted session %s for user %s", session_id, user_id)

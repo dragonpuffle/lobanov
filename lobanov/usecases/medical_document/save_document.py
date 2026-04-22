@@ -22,6 +22,10 @@ class InvalidDocumentStateError(Exception):
     pass
 
 
+class TranscriptNotFoundError(Exception):
+    pass
+
+
 class SaveDocument[sessionT]:
     def __init__(
         self,
@@ -40,7 +44,7 @@ class SaveDocument[sessionT]:
     async def execute(
         self,
         document_id: UUID,
-        format: str = "json",
+        output_format: str = "json",
     ) -> str:
         async with self.medical_document_repository.context() as session:
             document = await self.medical_document_repository.get_by_id(session, document_id)
@@ -57,21 +61,19 @@ class SaveDocument[sessionT]:
             transcript = await self.transcript_repository.get_by_id(session, document.transcript_id)
             if transcript is None:
                 error_message = f"Transcript with id {document.transcript_id} not found"
-                raise Exception(error_message)
+                raise TranscriptNotFoundError(error_message)
 
             clinical_facts = await self.clinical_fact_repository.get_by_session_id(session, document.session_id)
             template_fields = await self.template_repository.get_fields(session, document.template_id)
 
-            if format.lower() == "json":
+            if output_format.lower() == "json":
                 content = self._export_to_json(document, transcript, clinical_facts, template_fields)
                 filename = f"document_{document_id}.json"
             else:
-                error_message = f"Unsupported format: {format}. Only 'json' is supported."
+                error_message = f"Unsupported format: {output_format}. Only 'json' is supported."
                 raise ValueError(error_message)
 
-            file_path = await self.file_storage.save_document(content, filename, document.session_id)
-
-            return file_path
+            return await self.file_storage.save_document(content, filename, document.session_id)
 
     def _export_to_json(
         self,

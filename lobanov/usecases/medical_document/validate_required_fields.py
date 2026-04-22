@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass
 from enum import StrEnum
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 from lobanov.domain.entities.clinical_fact import ClinicalFact
 from lobanov.domain.entities.template_field import TemplateField
@@ -11,6 +11,12 @@ from lobanov.protocols.repositories import (
     ClinicalFactRepositoryProtocol,
     TemplateRepositoryProtocol,
 )
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+
+HIGH_CONFIDENCE_THRESHOLD = 0.8
 
 
 class MedicalDocumentNotFoundError(Exception):
@@ -64,9 +70,7 @@ class ValidateRequiredFields[sessionT]:
         session_id: UUID,
     ) -> DocumentValidationResult:
         async with contextlib.AsyncExitStack() as deferexit:
-            session = (
-                prev_session or await deferexit.enter_async_context(self.clinical_fact_repository.context())
-            )
+            session = prev_session or await deferexit.enter_async_context(self.clinical_fact_repository.context())
 
             template_fields = await self.template_repository.get_fields(session, template_id)
             if not template_fields:
@@ -98,7 +102,6 @@ class ValidateRequiredFields[sessionT]:
                 filled_required_fields_count=len(filled_required_fields),
                 field_results=field_results,
             )
-        raise
 
     def _validate_fields(
         self,
@@ -140,7 +143,7 @@ class ValidateRequiredFields[sessionT]:
 
                 if best_fact.is_updated_by_user:
                     status = self.FieldValueStatus.USER_EDITED
-                elif confidence >= 0.8:
+                elif confidence >= HIGH_CONFIDENCE_THRESHOLD:
                     status = self.FieldValueStatus.AUTO_FILLED
                 else:
                     status = self.FieldValueStatus.DOUBTFUL
