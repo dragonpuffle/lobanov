@@ -7,6 +7,9 @@ from faster_whisper import WhisperModel
 
 from lobanov.domain.entities.transcript import Transcript, TranscriptLanguage
 from lobanov.protocols import SpeechRecognitionProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class SpeechRecognitionError(Exception):
@@ -69,6 +72,7 @@ class WhisperSTTService(SpeechRecognitionProtocol):
                 updated_at=datetime.now(UTC),
             )
         except Exception as e:
+            logger.exception("Failed to transcribe audio")
             err_msg = f"Failed to transcribe audio: {e}"
             raise SpeechRecognitionError(err_msg) from e
 

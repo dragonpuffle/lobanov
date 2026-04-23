@@ -12,6 +12,9 @@ from lobanov.domain.entities.medical_document_template import MedicalDocumentTem
 from lobanov.domain.entities.template_field import TemplateField
 from lobanov.infra.postgres import AsyncSessionFactory
 from lobanov.protocols.repositories.template_repository_protocol import TemplateRepositoryProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class TemplateRepository(TemplateRepositoryProtocol[AsyncSession]):
@@ -26,6 +29,7 @@ class TemplateRepository(TemplateRepositoryProtocol[AsyncSession]):
                 yield session
                 await session.commit()
             except Exception:
+                logger.exception("Transaction failed; rolling back")
                 await session.rollback()
                 raise
 

@@ -12,6 +12,9 @@ from lobanov.protocols.repositories import (
     TranscriptRepositoryProtocol,
 )
 from lobanov.protocols.services import FileStorageProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class MedicalDocumentNotFoundError(Exception):
@@ -42,6 +45,19 @@ class SaveDocument[SessionT]:
         self.file_storage = file_storage
 
     async def execute(
+        self,
+        document_id: UUID,
+        output_format: str = "json",
+    ) -> str:
+        try:
+            return await self._execute(document_id, output_format)
+        except (MedicalDocumentNotFoundError, InvalidDocumentStateError, TranscriptNotFoundError, ValueError):
+            raise
+        except Exception:
+            logger.exception("SaveDocument.execute failed")
+            raise
+
+    async def _execute(
         self,
         document_id: UUID,
         output_format: str = "json",

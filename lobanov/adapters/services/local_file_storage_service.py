@@ -9,6 +9,9 @@ from uuid import UUID
 import aiofiles
 
 from lobanov.protocols.services.file_storage_protocol import FileStorageProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class FileStorageError(Exception):
@@ -64,6 +67,7 @@ class LocalFileStorageService(FileStorageProtocol):
             async with aiofiles.open(file_path, "wb") as f:
                 await f.write(file.getvalue())
         except Exception as e:
+            logger.exception("Failed to save audio file")
             err_msg = f"Failed to save audio file: {e}"
             raise FileStorageError(err_msg) from e
 
@@ -91,6 +95,7 @@ class LocalFileStorageService(FileStorageProtocol):
             elif await aiofiles.os.path.isdir(file_path):
                 await asyncio.to_thread(shutil.rmtree, file_path)
         except Exception as e:
+            logger.exception("Failed to delete file {path}", path=file_path)
             err_msg = f"Failed to delete file {file_path}: {e}"
             raise FileStorageError(err_msg) from e
         else:
@@ -109,6 +114,7 @@ class LocalFileStorageService(FileStorageProtocol):
             async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
                 await f.write(content)
         except Exception as e:
+            logger.exception("Failed to save document")
             err_msg = f"Failed to save document: {e}"
             raise FileStorageError(err_msg) from e
 

@@ -10,6 +10,9 @@ from lobanov.adapters.postgres_models.user import User as UserModel
 from lobanov.domain.entities.user import User
 from lobanov.infra.postgres import AsyncSessionFactory
 from lobanov.protocols.repositories.user_repository_protocol import UserRepositoryProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class UserRepository(UserRepositoryProtocol[AsyncSession]):
@@ -24,6 +27,7 @@ class UserRepository(UserRepositoryProtocol[AsyncSession]):
                 yield session
                 await session.commit()
             except Exception:
+                logger.exception("Transaction failed; rolling back")
                 await session.rollback()
                 raise
 

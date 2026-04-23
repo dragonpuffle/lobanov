@@ -13,6 +13,9 @@ from lobanov.protocols.repositories import (
     MedicalDocumentRepositoryProtocol,
     TranscriptRepositoryProtocol,
 )
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class SessionNotFoundError(Exception):
@@ -45,6 +48,20 @@ class GenerateMedicalDocument[SessionT]:
         self.medical_document_repository = medical_document_repository
 
     async def execute(self, session_id: UUID, template_id: UUID) -> MedicalDocument:
+        try:
+            return await self._execute(session_id, template_id)
+        except (
+            SessionNotFoundError,
+            InvalidSessionStateError,
+            TranscriptNotFoundError,
+            ClinicalFactsNotFoundError,
+        ):
+            raise
+        except Exception:
+            logger.exception("GenerateMedicalDocument.execute failed")
+            raise
+
+    async def _execute(self, session_id: UUID, template_id: UUID) -> MedicalDocument:
         async with self.session_repository.context() as session:
             documentation_session = await self.session_repository.get_by_id(session, session_id)
             if documentation_session is None:

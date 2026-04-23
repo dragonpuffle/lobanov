@@ -13,11 +13,17 @@ from lobanov.protocols.repositories import (
     TemplateRepositoryProtocol,
     TranscriptRepositoryProtocol,
 )
-from lobanov.usecases.medical_document.validate_required_fields import ValidateRequiredFields
+from lobanov.usecases.medical_document.validate_required_fields import (
+    TemplateNotFoundError,
+    ValidateRequiredFields,
+)
+from lobanov.utils.logging import get_logger
 
 if TYPE_CHECKING:
     from uuid import UUID
 
+
+logger = get_logger(__name__)
 
 HIGH_CONFIDENCE_THRESHOLD = 0.8
 LOW_CONFIDENCE_THRESHOLD = 0.5
@@ -73,6 +79,15 @@ class ReviewMedicalDocument[SessionT]:
         is_ready_for_confirmation: bool
 
     async def execute(self, document_id: UUID) -> DocumentReviewResult:
+        try:
+            return await self._execute(document_id)
+        except (MedicalDocumentNotFoundError, TranscriptNotFoundError, TemplateNotFoundError):
+            raise
+        except Exception:
+            logger.exception("ReviewMedicalDocument.execute failed")
+            raise
+
+    async def _execute(self, document_id: UUID) -> DocumentReviewResult:
         async with self.medical_document_repository.context() as session:
             document = await self.medical_document_repository.get_by_id(session, document_id)
             if document is None:

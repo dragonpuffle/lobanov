@@ -3,13 +3,14 @@ from datetime import UTC, datetime
 
 import aiofiles
 from dishka import FromDishka
+from dishka.integrations.fastapi import DishkaRoute
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from lobanov.infra.postgres import AsyncSessionFactory
 from lobanov.protocols.services import FileStorageProtocol
 
-router = APIRouter(prefix="/health", tags=["health"])
+router = APIRouter(prefix="/health", tags=["health"], route_class=DishkaRoute)
 
 
 class HealthCheckResponse:
@@ -50,7 +51,7 @@ async def health_check() -> dict[str, str]:
     description="Checks the connectivity and latency of the database connection.",
 )
 async def database_health_check(
-    session_factory: FromDishka[type[AsyncSession]],
+    session_factory: FromDishka[AsyncSessionFactory],
 ) -> dict[str, str | float]:
     start_time = datetime.now(tz=UTC)
 

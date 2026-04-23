@@ -2,6 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from dishka import FromDishka
+from dishka.integrations.fastapi import DishkaRoute
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,7 +30,9 @@ from lobanov.usecases.medical_document import (
     ValidateRequiredFields,
 )
 
-router = APIRouter(prefix="/sessions/{session_id}/document", tags=["medical_documents"])
+router = APIRouter(
+    prefix="/sessions/{session_id}/document", tags=["medical_documents"], route_class=DishkaRoute
+)
 
 
 class MedicalDocumentHandlerError(Exception):

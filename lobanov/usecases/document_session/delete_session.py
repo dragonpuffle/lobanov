@@ -48,10 +48,16 @@ class DeleteSession[SessionT]:
         session_id: UUID,
         user_id: UUID,
     ) -> None:
-        async with self.user_repository.context() as session:
-            await self._validate_user(session, user_id)
-            await self._get_and_validate_session(session, session_id, user_id)
-            await self._delete_session_data(session, session_id, user_id)
+        try:
+            async with self.user_repository.context() as session:
+                await self._validate_user(session, user_id)
+                await self._get_and_validate_session(session, session_id, user_id)
+                await self._delete_session_data(session, session_id, user_id)
+        except (UserNotFoundError, SessionNotFoundError, SessionCannotBeDeletedError, ValueError):
+            raise
+        except Exception:
+            logger.exception("DeleteSession.execute failed")
+            raise
 
     async def _validate_user(self, session, user_id: UUID) -> None:
         user = await self.user_repository.get_by_id(session, user_id)

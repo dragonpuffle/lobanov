@@ -8,6 +8,9 @@ from lobanov.protocols.repositories import (
     TranscriptRepositoryProtocol,
 )
 from lobanov.protocols.services import SpeechRecognitionProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class SessionNotFoundError(Exception):
@@ -60,6 +63,7 @@ class TranscribeAudio[SessionT]:
             try:
                 transcript = await self.stt_service.transcribe_audio(audio_record.file_path, language)
             except Exception as e:
+                logger.exception("Failed to transcribe audio in use case")
                 error_message = f"Failed to transcribe audio: {e}"
                 raise TranscriptionError(error_message) from e
 

@@ -2,6 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from dishka import FromDishka
+from dishka.integrations.fastapi import DishkaRoute
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +21,7 @@ from lobanov.usecases.document_session import (
     GetUserSessions,
 )
 
-router = APIRouter(prefix="/sessions", tags=["sessions"])
+router = APIRouter(prefix="/sessions", tags=["sessions"], route_class=DishkaRoute)
 
 
 class SessionHandlerError(Exception):
@@ -78,16 +79,17 @@ async def create_session(
 async def get_sessions(
     current_user: Annotated[User, Depends(get_current_user)],
     get_user_sessions_use_case: FromDishka[GetUserSessions[AsyncSession]],
-    limit: Annotated[int, Query(100, ge=1, le=1000, description="Maximum number of sessions to return (1-1000)")],
-    offset: Annotated[int, Query(0, ge=0, description="Number of sessions to skip for pagination")],
+    limit: Annotated[
+        int, Query(ge=1, le=1000, description="Maximum number of sessions to return (1-1000)")
+    ] = 100,
+    offset: Annotated[int, Query(ge=0, description="Number of sessions to skip for pagination")] = 0,
     status_filter: Annotated[
         DocumentationSessionStatus | None,
         Query(
-            None,
             alias="status",
             description="Filter sessions by status (created, audio_uploaded, transcribed, draft_created, confirmed)",
         ),
-    ],
+    ] = None,
 ) -> SessionListResponse:
     try:
         sessions = await get_user_sessions_use_case.execute(

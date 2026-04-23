@@ -11,10 +11,13 @@ from lobanov.protocols.repositories import (
     ClinicalFactRepositoryProtocol,
     TemplateRepositoryProtocol,
 )
+from lobanov.utils.logging import get_logger
 
 if TYPE_CHECKING:
     from uuid import UUID
 
+
+logger = get_logger(__name__)
 
 HIGH_CONFIDENCE_THRESHOLD = 0.8
 
@@ -63,6 +66,21 @@ class ValidateRequiredFields[SessionT]:
         field_results: list[ValidateRequiredFields.FieldValidationResult]
 
     async def execute(
+        self,
+        prev_session: SessionT | None,
+        document_id: UUID,
+        template_id: UUID,
+        session_id: UUID,
+    ) -> DocumentValidationResult:
+        try:
+            return await self._execute(prev_session, document_id, template_id, session_id)
+        except TemplateNotFoundError:
+            raise
+        except Exception:
+            logger.exception("ValidateRequiredFields.execute failed")
+            raise
+
+    async def _execute(
         self,
         prev_session: SessionT | None,
         document_id: UUID,

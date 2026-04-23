@@ -3,6 +3,7 @@ from uuid import UUID
 
 import aiofiles
 from dishka import FromDishka
+from dishka.integrations.fastapi import DishkaRoute
 from fastapi import APIRouter, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +12,7 @@ from lobanov.app.api.v1.audio.dto import AudioUploadResponse
 from lobanov.protocols.repositories import AudioRecordRepositoryProtocol
 from lobanov.usecases.audio import UploadAudio
 
-router = APIRouter(prefix="/sessions/{session_id}/audio", tags=["audio"])
+router = APIRouter(prefix="/sessions/{session_id}/audio", tags=["audio"], route_class=DishkaRoute)
 
 
 class AudioHandlerError(Exception):

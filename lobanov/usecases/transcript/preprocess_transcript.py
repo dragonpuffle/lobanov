@@ -4,6 +4,9 @@ from uuid import UUID
 from lobanov.domain import Transcript
 from lobanov.protocols.repositories import TranscriptRepositoryProtocol
 from lobanov.protocols.services import TextProcessingProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class TranscriptNotFoundError(Exception):
@@ -32,6 +35,7 @@ class PreprocessTranscript[SessionT]:
         try:
             cleaned_text = await self.text_processing_service.preprocess_text(transcript.text)
         except Exception as e:
+            logger.exception("Preprocess transcript failed in use case")
             error_message = f"Failed to preprocess transcript: {e}"
             raise TextPreprocessingError(error_message) from e
 

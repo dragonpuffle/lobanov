@@ -12,6 +12,9 @@ from lobanov.infra.postgres import AsyncSessionFactory
 from lobanov.protocols.repositories.documentation_session_repository_protocol import (
     DocumentationSessionRepositoryProtocol,
 )
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class DocumentationSessionRepository(DocumentationSessionRepositoryProtocol[AsyncSession]):
@@ -26,6 +29,7 @@ class DocumentationSessionRepository(DocumentationSessionRepositoryProtocol[Asyn
                 yield session
                 await session.commit()
             except Exception:
+                logger.exception("Transaction failed; rolling back")
                 await session.rollback()
                 raise
 

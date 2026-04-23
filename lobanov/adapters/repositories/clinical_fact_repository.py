@@ -10,6 +10,9 @@ from lobanov.adapters.postgres_models.clinical_fact import ClinicalFact as Clini
 from lobanov.domain.entities.clinical_fact import ClinicalFact
 from lobanov.infra.postgres import AsyncSessionFactory
 from lobanov.protocols.repositories.clinical_fact_repository_protocol import ClinicalFactRepositoryProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class ClinicalFactRepository(ClinicalFactRepositoryProtocol[AsyncSession]):
@@ -24,6 +27,7 @@ class ClinicalFactRepository(ClinicalFactRepositoryProtocol[AsyncSession]):
                 yield session
                 await session.commit()
             except Exception:
+                logger.exception("Transaction failed; rolling back")
                 await session.rollback()
                 raise
 

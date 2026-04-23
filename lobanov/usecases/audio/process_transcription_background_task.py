@@ -8,9 +8,12 @@ from lobanov.protocols.repositories import (
     TemplateRepositoryProtocol,
     TranscriptRepositoryProtocol,
 )
-from lobanov.usecases.audio import TranscribeAudio
-from lobanov.usecases.clinical_facts import ExtractClinicalFacts
-from lobanov.usecases.transcript import PreprocessTranscript
+from lobanov.usecases.audio.transcribe_audio import TranscribeAudio
+from lobanov.usecases.clinical_facts.extract_clinical_facts import ExtractClinicalFacts
+from lobanov.usecases.transcript.preprocess_transcript import PreprocessTranscript
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class BackgroundTaskError(Exception):
@@ -44,5 +47,6 @@ class ProcessTranscriptionBackgroundTask[SessionT]:
                 await self.dependencies.extract_clinical_facts.execute(session, updated_transcript.id)
 
         except Exception as e:
+            logger.exception("Background transcription task failed for session {sid}", sid=session_id)
             error_message = f"Background task failed for session {session_id}: {e}"
             raise BackgroundTaskError(error_message) from e

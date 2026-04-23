@@ -10,6 +10,9 @@ from lobanov.adapters.postgres_models.audio_record import AudioRecord as AudioRe
 from lobanov.domain.entities.audio_record import AudioRecord
 from lobanov.infra.postgres import AsyncSessionFactory
 from lobanov.protocols.repositories.audio_record_repository_protocol import AudioRecordRepositoryProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class AudioRecordRepository(AudioRecordRepositoryProtocol[AsyncSession]):
@@ -24,6 +27,7 @@ class AudioRecordRepository(AudioRecordRepositoryProtocol[AsyncSession]):
                 yield session
                 await session.commit()
             except Exception:
+                logger.exception("Transaction failed; rolling back")
                 await session.rollback()
                 raise
 

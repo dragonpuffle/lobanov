@@ -2,6 +2,9 @@ from uuid import UUID
 
 from lobanov.domain import DocumentationSession, DocumentationSessionStatus
 from lobanov.protocols.repositories import DocumentationSessionRepositoryProtocol, UserRepositoryProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class UserNotFoundError(Exception):
@@ -24,19 +27,25 @@ class GetUserSessions[SessionT]:
         offset: int = 0,
         status: DocumentationSessionStatus | None = None,
     ) -> list[DocumentationSession]:
-        async with self.user_repository.context() as session:
-            user = await self.user_repository.get_by_id(session, user_id)
-            if user is None:
-                error_message = f"User with id {user_id} not found"
-                raise UserNotFoundError(error_message)
+        try:
+            async with self.user_repository.context() as session:
+                user = await self.user_repository.get_by_id(session, user_id)
+                if user is None:
+                    error_message = f"User with id {user_id} not found"
+                    raise UserNotFoundError(error_message)
 
-            if not user.is_active:
-                error_message = f"User with id {user_id} is not active"
-                raise ValueError(error_message)
+                if not user.is_active:
+                    error_message = f"User with id {user_id} is not active"
+                    raise ValueError(error_message)
 
-            sessions = await self.session_repository.get_by_user_id(session, user_id, limit, offset)
+                sessions = await self.session_repository.get_by_user_id(session, user_id, limit, offset)
 
-            if status is not None:
-                sessions = [s for s in sessions if s.status == status]
+                if status is not None:
+                    sessions = [s for s in sessions if s.status == status]
 
-            return sessions
+                return sessions
+        except (UserNotFoundError, ValueError):
+            raise
+        except Exception:
+            logger.exception("GetUserSessions.execute failed")
+            raise

@@ -9,6 +9,9 @@ from lobanov.protocols.repositories import (
     TranscriptRepositoryProtocol,
 )
 from lobanov.protocols.services import ClinicalExtractionProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class TranscriptNotFoundError(Exception):
@@ -69,6 +72,7 @@ class ExtractClinicalFacts[SessionT]:
                 transcript.text, template_fields
             )
         except Exception as e:
+            logger.exception("Clinical fact extraction failed in use case")
             error_message = f"Failed to extract clinical facts: {e}"
             raise ClinicalExtractionError(error_message) from e
 

@@ -12,20 +12,20 @@ from lobanov.app.api.v1 import (
     medical_documents_router,
     session_router,
     templates_router,
+    transcription_router,
 )
 from lobanov.app.di import container
 from lobanov.infra.config import GlobalConfig
 from lobanov.utils.logging import get_logger, setup_logging
 
 settings = GlobalConfig.load()
+setup_logging(settings.app.log_level)
 logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     logger.info("Starting up application...")
-    setup_logging()
-    logger.info("Application started successfully")
     yield
     logger.info("Shutting down application...")
     await container.close()
@@ -46,8 +46,20 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 async def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     if isinstance(exc, HTTPException):
-        error_message = f"HTTP exception: {exc.status_code} - {exc.detail}"
-        logger.warning(error_message, extra={"path": request.url.path, "status_code": exc.status_code})
+        if exc.status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR:
+            logger.opt(exception=exc.__cause__).error(
+                "HTTP exception: {code} - {detail!r} (path={path})",
+                code=exc.status_code,
+                detail=exc.detail,
+                path=request.url.path,
+            )
+        else:
+            logger.warning(
+                "HTTP exception: {code} - {detail!r} (path={path})",
+                code=exc.status_code,
+                detail=exc.detail,
+                path=request.url.path,
+            )
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail},
@@ -85,6 +97,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(session_router, prefix="/api/v1")
     app.include_router(audio_router, prefix="/api/v1")
+    app.include_router(transcription_router, prefix="/api/v1")
     app.include_router(templates_router, prefix="/api/v1")
     app.include_router(medical_documents_router, prefix="/api/v1")
 

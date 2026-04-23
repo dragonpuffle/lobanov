@@ -2,6 +2,9 @@ import re
 from typing import override
 
 from lobanov.protocols import TextProcessingProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class TextProcessingError(Exception):
@@ -22,6 +25,7 @@ class TextPreprocessingService(TextProcessingProtocol):
             cleaned = await self.clean_text(text)
             return await self.normalize_text(cleaned)
         except Exception as e:
+            logger.exception("Failed to preprocess text")
             err_msg = f"Failed to preprocess text: {e}"
             raise TextProcessingError(err_msg) from e
 
@@ -42,6 +46,7 @@ class TextPreprocessingService(TextProcessingProtocol):
             cleaned = re.sub(r"\s+", " ", cleaned)
             return cleaned.strip()
         except Exception as e:
+            logger.exception("Failed to clean text")
             err_msg = f"Failed to clean text: {e}"
             raise TextProcessingError(err_msg) from e
 
@@ -64,5 +69,6 @@ class TextPreprocessingService(TextProcessingProtocol):
             normalized = re.sub(r"\s+", " ", normalized)
             return normalized.strip()
         except Exception as e:
+            logger.exception("Failed to normalize text")
             err_msg = f"Failed to normalize text: {e}"
             raise TextProcessingError(err_msg) from e

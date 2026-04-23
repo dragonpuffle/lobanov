@@ -4,3 +4,4 @@ from lobanov.app.api.v1.documentation_session.handlers import router as session_
 from lobanov.app.api.v1.health.handlers import router as health_router
 from lobanov.app.api.v1.medical_documents.handlers import router as medical_documents_router
 from lobanov.app.api.v1.templates.handlers import router as templates_router
+from lobanov.app.api.v1.transcription.handlers import router as transcription_router

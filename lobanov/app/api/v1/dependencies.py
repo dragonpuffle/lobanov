@@ -2,9 +2,11 @@ from typing import Annotated
 from uuid import UUID
 
 from dishka import FromDishka
+from dishka.integrations.fastapi import inject
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from lobanov.domain.entities.user import User
 from lobanov.infra.config import GlobalConfig
@@ -41,9 +43,10 @@ class WeakPasswordError(AuthenticationError):
     pass
 
 
-async def get_current_user[SessionT](
+@inject
+async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
-    user_repository: FromDishka[UserRepositoryProtocol[SessionT]],
+    user_repository: FromDishka[UserRepositoryProtocol[AsyncSession]],
     config: FromDishka[GlobalConfig],
 ) -> User:
     try:

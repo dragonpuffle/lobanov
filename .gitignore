@@ -216,3 +216,5 @@ logs/
 
 # Application storage
 storage/
+
+config.docker.toml

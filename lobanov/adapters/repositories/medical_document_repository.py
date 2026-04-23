@@ -10,6 +10,9 @@ from lobanov.adapters.postgres_models.medical_document import MedicalDocument as
 from lobanov.domain.entities.medical_document import MedicalDocument
 from lobanov.infra.postgres import AsyncSessionFactory
 from lobanov.protocols.repositories.medical_document_repository_protocol import MedicalDocumentRepositoryProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class MedicalDocumentRepository(MedicalDocumentRepositoryProtocol[AsyncSession]):
@@ -24,6 +27,7 @@ class MedicalDocumentRepository(MedicalDocumentRepositoryProtocol[AsyncSession])
                 yield session
                 await session.commit()
             except Exception:
+                logger.exception("Transaction failed; rolling back")
                 await session.rollback()
                 raise
 

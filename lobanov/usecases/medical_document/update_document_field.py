@@ -8,7 +8,13 @@ from lobanov.protocols.repositories import (
     MedicalDocumentRepositoryProtocol,
     TemplateRepositoryProtocol,
 )
-from lobanov.usecases.medical_document.validate_required_fields import ValidateRequiredFields
+from lobanov.usecases.medical_document.validate_required_fields import (
+    TemplateNotFoundError,
+    ValidateRequiredFields,
+)
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class MedicalDocumentNotFoundError(Exception):
@@ -37,6 +43,25 @@ class UpdateDocumentField[SessionT]:
         self.validate_required_fields = validate_required_fields
 
     async def execute(
+        self,
+        document_id: UUID,
+        field_id: UUID,
+        new_value: str,
+    ) -> ValidateRequiredFields.DocumentValidationResult:
+        try:
+            return await self._execute(document_id, field_id, new_value)
+        except (
+            MedicalDocumentNotFoundError,
+            TemplateFieldNotFoundError,
+            InvalidDocumentStateError,
+            TemplateNotFoundError,
+        ):
+            raise
+        except Exception:
+            logger.exception("UpdateDocumentField.execute failed")
+            raise
+
+    async def _execute(
         self,
         document_id: UUID,
         field_id: UUID,

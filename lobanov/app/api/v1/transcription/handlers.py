@@ -2,6 +2,7 @@ from typing import Annotated
 from uuid import UUID, uuid4
 
 from dishka import FromDishka
+from dishka.integrations.fastapi import DishkaRoute
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +12,7 @@ from lobanov.domain.entities.user import User
 from lobanov.protocols.repositories import TranscriptRepositoryProtocol
 from lobanov.usecases.audio import ProcessTranscriptionBackgroundTask
 
-router = APIRouter(prefix="/sessions/{session_id}", tags=["transcription"])
+router = APIRouter(prefix="/sessions/{session_id}", tags=["transcription"], route_class=DishkaRoute)
 
 
 class TranscriptionHandlerError(Exception):

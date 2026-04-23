@@ -46,6 +46,10 @@ from lobanov.protocols.services import (
     TextProcessingProtocol,
 )
 from lobanov.usecases.audio import TranscribeAudio, UploadAudio
+from lobanov.usecases.audio.process_transcription_background_task import (
+    ProcessTranscriptionBackgroundTask,
+    TranscriptionDependencies,
+)
 from lobanov.usecases.auth import LoginUser, RegisterUser
 from lobanov.usecases.clinical_facts import ExtractClinicalFacts
 from lobanov.usecases.document_session import (
@@ -159,7 +163,7 @@ class ServiceProvider(dishka.Provider):
     def provide_clinical_extraction_service(self, nlp_config: NLPConfig) -> ClinicalExtractionProtocol:
         """сервис извлечения клинической информации на основе LLM"""
         return LLMClinicalExtractionService(
-            use_mock=True,
+            use_mock=False,
             api_key=nlp_config.api_key,
             model=nlp_config.model,
         )
@@ -253,6 +257,31 @@ class UseCaseProvider(dishka.Provider):
             transcript_repository=transcript_repository,
             stt_service=speech_recognition_service,
         )
+
+    @dishka.provide
+    def provide_process_transcription_background_task(  # noqa: PLR0913
+        self,
+        session_repository: DocumentationSessionRepositoryProtocol[AsyncSession],
+        transcript_repository: TranscriptRepositoryProtocol[AsyncSession],
+        audio_record_repository: AudioRecordRepositoryProtocol[AsyncSession],
+        clinical_fact_repository: ClinicalFactRepositoryProtocol[AsyncSession],
+        template_repository: TemplateRepositoryProtocol[AsyncSession],
+        transcribe_audio: TranscribeAudio[AsyncSession],
+        preprocess_transcript: PreprocessTranscript[AsyncSession],
+        extract_clinical_facts: ExtractClinicalFacts[AsyncSession],
+    ) -> ProcessTranscriptionBackgroundTask[AsyncSession]:
+        """фоновая цепочка: транскрипция → препроцессинг → извлечение фактов"""
+        deps = TranscriptionDependencies(
+            session_repository=session_repository,
+            transcript_repository=transcript_repository,
+            audio_record_repository=audio_record_repository,
+            clinical_fact_repository=clinical_fact_repository,
+            template_repository=template_repository,
+            transcribe_audio=transcribe_audio,
+            preprocess_transcript=preprocess_transcript,
+            extract_clinical_facts=extract_clinical_facts,
+        )
+        return ProcessTranscriptionBackgroundTask(deps)
 
     @dishka.provide
     def provide_preprocess_transcript_usecase(

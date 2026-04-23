@@ -17,4 +17,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --compile-bytecode
 
 ENV PATH="/app/.venv/bin:$PATH"
-ENTRYPOINT []
+
+EXPOSE 8000
+
+# Читаем config.toml из рабочей каталога (в compose: volume → config.docker.toml)
+CMD ["python", "-m", "lobanov.app"]

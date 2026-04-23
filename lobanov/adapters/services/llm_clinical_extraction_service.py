@@ -8,6 +8,9 @@ import httpx
 from lobanov.domain.entities.clinical_fact import ClinicalFact
 from lobanov.protocols import ClinicalExtractionProtocol
 from lobanov.protocols.services.clinical_extraction_protocol import TemplateField
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class ClinicalExtractionError(Exception):
@@ -38,6 +41,7 @@ class LLMClinicalExtractionService(ClinicalExtractionProtocol):
 
             return facts  # noqa: TRY300
         except Exception as e:
+            logger.exception("Failed to extract clinical facts")
             err_msg = f"Failed to extract clinical facts: {e}"
             raise ClinicalExtractionError(err_msg) from e
 
@@ -49,6 +53,7 @@ class LLMClinicalExtractionService(ClinicalExtractionProtocol):
 
             return fact.confidence  # noqa: TRY300
         except Exception as e:
+            logger.exception("Failed to get confidence for fact")
             err_msg = f"Failed to get confidence for fact: {e}"
             raise ClinicalExtractionError(err_msg) from e
 
@@ -169,6 +174,7 @@ Respond in JSON format with a list of facts."""
                     facts.append(fact)
 
         except Exception as e:
+            logger.exception("LLM extraction failed")
             err_msg = f"LLM extraction failed, falling back to mock extraction: {e}"
             raise ClinicalExtractionError(err_msg) from e
 

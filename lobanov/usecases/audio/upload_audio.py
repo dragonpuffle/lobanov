@@ -6,6 +6,9 @@ from uuid import UUID, uuid4
 from lobanov.domain import AudioRecord, DocumentationSession, DocumentationSessionStatus
 from lobanov.protocols.repositories import AudioRecordRepositoryProtocol, DocumentationSessionRepositoryProtocol
 from lobanov.protocols.services import FileStorageProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class SessionNotFoundError(Exception):
@@ -45,6 +48,7 @@ class UploadAudio[SessionT]:
             try:
                 file_path = await self.file_storage.save_audio(file, filename, session_id)
             except Exception as e:
+                logger.exception("Failed to save audio file in use case")
                 error_message = f"Failed to save audio file: {e}"
                 raise AudioUploadError(error_message) from e
 

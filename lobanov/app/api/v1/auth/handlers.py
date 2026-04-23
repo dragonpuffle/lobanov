@@ -1,5 +1,7 @@
 from dishka import FromDishka
+from dishka.integrations.fastapi import DishkaRoute
 from fastapi import APIRouter, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from lobanov.app.api.v1.auth.dto import AuthResponse, LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from lobanov.usecases.auth import (
@@ -11,14 +13,17 @@ from lobanov.usecases.auth import (
     UserAlreadyExistsError,
     WeakPasswordError,
 )
+from lobanov.utils.logging import get_logger
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+logger = get_logger(__name__)
+
+router = APIRouter(prefix="/auth", tags=["auth"], route_class=DishkaRoute)
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
     request: RegisterRequest,
-    register_use_case: FromDishka[RegisterUser],
+    register_use_case: FromDishka[RegisterUser[AsyncSession]],
 ) -> AuthResponse:
     try:
         user = await register_use_case.execute(
@@ -38,13 +43,14 @@ async def register(
     except WeakPasswordError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except Exception as e:
+        logger.exception("Registration failed")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Registration failed") from e
 
 
 @router.post("/login")
 async def login(
     request: LoginRequest,
-    login_use_case: FromDishka[LoginUser],
+    login_use_case: FromDishka[LoginUser[AsyncSession]],
 ) -> AuthResponse:
     try:
         result = await login_use_case.execute(
@@ -67,6 +73,8 @@ async def login(
     except InactiveUserError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
     except TokenGenerationError as e:
+        logger.exception("Token generation failed")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Token generation failed") from e
     except Exception as e:
+        logger.exception("Login failed")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Login failed") from e

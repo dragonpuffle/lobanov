@@ -5,6 +5,9 @@ from lobanov.domain import User
 from lobanov.protocols.repositories.user_repository_protocol import UserRepositoryProtocol
 from lobanov.protocols.services.jwt_token_protocol import JWTTokenProtocol
 from lobanov.protocols.services.password_manager_protocol import PasswordManagerProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class InvalidCredentialsError(Exception):
@@ -39,6 +42,15 @@ class LoginUser[SessionT]:
         expires_in: int
 
     async def execute(self, email: str, password: str) -> LoginResult:
+        try:
+            return await self._execute(email, password)
+        except (InvalidCredentialsError, InactiveUserError, TokenGenerationError):
+            raise
+        except Exception:
+            logger.exception("LoginUser.execute failed")
+            raise
+
+    async def _execute(self, email: str, password: str) -> LoginResult:
         async with self.user_repository.context() as session:
             user = await self.user_repository.get_by_email(session, email)
             if user is None:
@@ -59,6 +71,7 @@ class LoginUser[SessionT]:
             access_token = await self.jwt_token_service.create_access_token(user.id, expires_delta)
             expires_in = int(expires_delta.total_seconds())
         except Exception as e:
+            logger.exception("Failed to generate access token")
             err_msg = "Failed to generate access token"
             raise TokenGenerationError(err_msg) from e
 

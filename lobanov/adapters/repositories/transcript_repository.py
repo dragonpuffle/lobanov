@@ -10,6 +10,9 @@ from lobanov.adapters.postgres_models.transcript import Transcript as Transcript
 from lobanov.domain.entities.transcript import Transcript
 from lobanov.infra.postgres import AsyncSessionFactory
 from lobanov.protocols.repositories.transcript_repository_protocol import TranscriptRepositoryProtocol
+from lobanov.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class TranscriptRepository(TranscriptRepositoryProtocol[AsyncSession]):
@@ -24,6 +27,7 @@ class TranscriptRepository(TranscriptRepositoryProtocol[AsyncSession]):
                 yield session
                 await session.commit()
             except Exception:
+                logger.exception("Transaction failed; rolling back")
                 await session.rollback()
                 raise
 

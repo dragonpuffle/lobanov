@@ -63,3 +63,7 @@ build/
 dist/
 *.egg-info/
 *.egg
+
+/dist/
+/node_modules/
+/storybook-static/
