@@ -1,6 +1,7 @@
 from typing import Annotated
 from uuid import UUID, uuid4
 
+from dishka import FromDishka
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -48,7 +49,7 @@ async def transcribe_audio(
     session_id: str,
     request: TranscribeRequest,
     background_tasks: BackgroundTasks,
-    process_transcription_bg_task: ProcessTranscriptionBackgroundTask[AsyncSession],
+    process_transcription_bg_task: FromDishka[ProcessTranscriptionBackgroundTask[AsyncSession]],
 ) -> TranscribeResponse:
     try:
         session_uuid = UUID(session_id)
@@ -107,7 +108,7 @@ async def transcribe_audio(
 async def get_transcript(
     session_id: str,
     _: Annotated[User, Depends(get_current_user)],
-    transcript_repository: TranscriptRepositoryProtocol[AsyncSession],
+    transcript_repository: FromDishka[TranscriptRepositoryProtocol[AsyncSession]],
 ) -> TranscriptResponse:
     try:
         session_uuid = UUID(session_id)

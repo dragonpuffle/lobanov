@@ -1,12 +1,14 @@
 import uvicorn
 
-from lobanov.config import settings
+from lobanov.app.app import app
+from lobanov.infra.config import GlobalConfig
 
 if __name__ == "__main__":
+    config = GlobalConfig.load()
     uvicorn.run(
-        "lobanov.app.app:app",
-        host="0.0.0.0",
+        app,
+        host="0.0.0.0",  # noqa: S104
         port=8000,
-        reload=settings.debug,
-        log_level=settings.log_level.lower(),
+        reload=config.app.debug,
+        log_level=config.app.log_level.lower(),
     )

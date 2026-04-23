@@ -1,6 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
+from dishka import FromDishka
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,7 +45,7 @@ class SessionNotFoundError(SessionHandlerError):
 async def create_session(
     request: CreateSessionRequest,
     current_user: Annotated[User, Depends(get_current_user)],
-    create_session_use_case: CreateDocumentationSession[AsyncSession],
+    create_session_use_case: FromDishka[CreateDocumentationSession[AsyncSession]],
 ) -> SessionResponse:
     try:
         session = await create_session_use_case.execute(current_user.id, request.template_id)
@@ -76,7 +77,7 @@ async def create_session(
 )
 async def get_sessions(
     current_user: Annotated[User, Depends(get_current_user)],
-    get_user_sessions_use_case: GetUserSessions[AsyncSession],
+    get_user_sessions_use_case: FromDishka[GetUserSessions[AsyncSession]],
     limit: Annotated[int, Query(100, ge=1, le=1000, description="Maximum number of sessions to return (1-1000)")],
     offset: Annotated[int, Query(0, ge=0, description="Number of sessions to skip for pagination")],
     status_filter: Annotated[
@@ -130,7 +131,7 @@ async def get_sessions(
 async def get_session_details(
     session_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
-    get_session_details_use_case: GetSessionDetails[AsyncSession],
+    get_session_details_use_case: FromDishka[GetSessionDetails[AsyncSession]],
 ) -> SessionDetailsResponse:
     try:
         session_uuid = UUID(session_id)

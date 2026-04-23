@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -11,6 +12,7 @@ from lobanov.app.api.v1 import (
     session_router,
     templates_router,
 )
+from lobanov.app.di import container
 from lobanov.infra.config import GlobalConfig
 from lobanov.utils.logging import get_logger, setup_logging
 
@@ -19,17 +21,19 @@ logger = get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_: FastAPI):
     logger.info("Starting up application...")
     setup_logging()
     logger.info("Application started successfully")
     yield
     logger.info("Shutting down application...")
+    await container.close()
     logger.info("Application shut down successfully")
 
 
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    logger.error(f"Unhandled exception: {exc}", exc_info=True, extra={"path": request.url.path})
+    error_message = f"Unhandled exception: {exc!s}"
+    logger.error(error_message, exc_info=True, extra={"path": request.url.path})  # noqa: LOG014
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
@@ -41,10 +45,8 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 async def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     if isinstance(exc, HTTPException):
-        logger.warning(
-            f"HTTP exception: {exc.status_code} - {exc.detail}",
-            extra={"path": request.url.path, "status_code": exc.status_code},
-        )
+        error_message = f"HTTP exception: {exc.status_code} - {exc.detail}"
+        logger.warning(error_message, extra={"path": request.url.path, "status_code": exc.status_code})
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail},
@@ -72,6 +74,8 @@ def create_app() -> FastAPI:
         allow_methods=settings.cors.allow_methods,
         allow_headers=settings.cors.allow_headers,
     )
+
+    setup_dishka(container=container, app=app)
 
     app.add_exception_handler(Exception, global_exception_handler)
     app.add_exception_handler(HTTPException, http_exception_handler)

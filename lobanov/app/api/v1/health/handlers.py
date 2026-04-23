@@ -2,6 +2,7 @@ import os
 from datetime import UTC, datetime
 
 import aiofiles
+from dishka import FromDishka
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,7 +50,7 @@ async def health_check() -> dict[str, str]:
     description="Checks the connectivity and latency of the database connection.",
 )
 async def database_health_check(
-    session_factory: type[AsyncSession],
+    session_factory: FromDishka[type[AsyncSession]],
 ) -> dict[str, str | float]:
     start_time = datetime.now(tz=UTC)
 
@@ -113,7 +114,7 @@ async def database_health_check(
     },
 )
 async def storage_health_check(
-    storage_service: FileStorageProtocol,
+    storage_service: FromDishka[FileStorageProtocol],
 ) -> dict[str, str | None]:
     try:
         storage_path = None

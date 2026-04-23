@@ -1,11 +1,13 @@
 from typing import Annotated
 from uuid import UUID
 
+from dishka import FromDishka
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
 from lobanov.domain.entities.user import User
+from lobanov.infra.config import GlobalConfig
 from lobanov.protocols.repositories.user_repository_protocol import UserRepositoryProtocol
 
 security = HTTPBearer()
@@ -29,13 +31,12 @@ class InactiveUserError(AuthenticationError):
 
 async def get_current_user[SessionT](
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
-    user_repository: UserRepositoryProtocol[SessionT],
-    secret_key: str,
-    algorithm: str = "HS256",
+    user_repository: FromDishka[UserRepositoryProtocol[SessionT]],
+    config: FromDishka[GlobalConfig],
 ) -> User:
     try:
         token = credentials.credentials
-        payload = jwt.decode(token, secret_key, algorithms=[algorithm])
+        payload = jwt.decode(token, config.jwt.secret_key, algorithms=[config.jwt.algorithm])
         user_id: str = payload.get("sub")
         if user_id is None:
             raise InvalidTokenError("Invalid token: missing user ID")

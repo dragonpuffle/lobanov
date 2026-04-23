@@ -1,6 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
+from dishka import FromDishka
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -69,7 +70,7 @@ class RequiredFieldsNotFilledError(MedicalDocumentHandlerError):
 async def generate_document(
     session_id: str,
     request: GenerateDocumentRequest,
-    generate_document_use_case: GenerateMedicalDocument[AsyncSession],
+    generate_document_use_case: FromDishka[GenerateMedicalDocument[AsyncSession]],
 ) -> GenerateDocumentResponse:
     try:
         session_uuid = UUID(session_id)
@@ -120,9 +121,9 @@ async def generate_document(
 @router.get("")
 async def get_document(
     session_id: str,
-    medical_document_repository: MedicalDocumentRepositoryProtocol[AsyncSession],
-    template_repository: TemplateRepositoryProtocol[AsyncSession],
-    review_document_use_case: ReviewMedicalDocument[AsyncSession],
+    medical_document_repository: FromDishka[MedicalDocumentRepositoryProtocol[AsyncSession]],
+    template_repository: FromDishka[TemplateRepositoryProtocol[AsyncSession]],
+    review_document_use_case: FromDishka[ReviewMedicalDocument[AsyncSession]],
 ) -> MedicalDocumentDetailsResponse:
     try:
         session_uuid = UUID(session_id)
@@ -199,8 +200,8 @@ async def update_field(
     field_id: str,
     request: UpdateFieldRequest,
     _: Annotated[User, Depends(get_current_user)],
-    medical_document_repository: MedicalDocumentRepositoryProtocol[AsyncSession],
-    update_field_use_case: UpdateDocumentField[AsyncSession],
+    medical_document_repository: FromDishka[MedicalDocumentRepositoryProtocol[AsyncSession]],
+    update_field_use_case: FromDishka[UpdateDocumentField[AsyncSession]],
 ) -> UpdateFieldResponse:
     try:
         session_uuid = UUID(session_id)
@@ -267,8 +268,8 @@ async def update_field(
 async def validate_document(
     session_id: str,
     _: Annotated[User, Depends(get_current_user)],
-    medical_document_repository: MedicalDocumentRepositoryProtocol[AsyncSession],
-    validate_required_fields_use_case: ValidateRequiredFields[AsyncSession],
+    medical_document_repository: FromDishka[MedicalDocumentRepositoryProtocol[AsyncSession]],
+    validate_required_fields_use_case: FromDishka[ValidateRequiredFields[AsyncSession]],
 ) -> ValidateDocumentResponse:
     try:
         session_uuid = UUID(session_id)
@@ -323,8 +324,8 @@ async def validate_document(
 async def confirm_document(
     session_id: str,
     _: Annotated[User, Depends(get_current_user)],
-    medical_document_repository: MedicalDocumentRepositoryProtocol[AsyncSession],
-    confirm_document_use_case: ConfirmDocument[AsyncSession],
+    medical_document_repository: FromDishka[MedicalDocumentRepositoryProtocol[AsyncSession]],
+    confirm_document_use_case: FromDishka[ConfirmDocument[AsyncSession]],
 ) -> ConfirmDocumentResponse:
     try:
         session_uuid = UUID(session_id)
@@ -381,8 +382,8 @@ async def export_document(
     session_id: str,
     request: ExportDocumentRequest,
     _: Annotated[User, Depends(get_current_user)],
-    medical_document_repository: MedicalDocumentRepositoryProtocol[AsyncSession],
-    save_document_use_case: SaveDocument[AsyncSession],
+    medical_document_repository: FromDishka[MedicalDocumentRepositoryProtocol[AsyncSession]],
+    save_document_use_case: FromDishka[SaveDocument[AsyncSession]],
 ) -> ExportDocumentResponse:
     try:
         session_uuid = UUID(session_id)

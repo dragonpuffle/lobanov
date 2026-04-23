@@ -2,6 +2,7 @@ from io import BytesIO
 from uuid import UUID
 
 import aiofiles
+from dishka import FromDishka
 from fastapi import APIRouter, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,7 +40,7 @@ class AudioUploadFailedError(AudioHandlerError):
 async def upload_audio(
     session_id: str,
     file: UploadFile,
-    upload_audio_use_case: UploadAudio[AsyncSession],
+    upload_audio_use_case: FromDishka[UploadAudio[AsyncSession]],
 ) -> AudioUploadResponse:
     try:
         session_uuid = UUID(session_id)
@@ -90,7 +91,7 @@ async def upload_audio(
 )
 async def get_audio(
     session_id: str,
-    audio_record_repository: AudioRecordRepositoryProtocol[AsyncSession],
+    audio_record_repository: FromDishka[AudioRecordRepositoryProtocol[AsyncSession]],
 ) -> FileResponse:
     try:
         session_uuid = UUID(session_id)

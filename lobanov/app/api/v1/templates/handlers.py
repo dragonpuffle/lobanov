@@ -1,6 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
+from dishka import FromDishka
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,7 +34,7 @@ class TemplateNotFoundError(TemplateHandlerError):
 )
 async def list_templates(
     _: Annotated[User, Depends(get_current_user)],
-    template_repository: TemplateRepositoryProtocol[AsyncSession],
+    template_repository: FromDishka[TemplateRepositoryProtocol[AsyncSession]],
     active_only: Annotated[bool, Query(True, description="Filter to show only active templates")],  # noqa: FBT003
     limit: Annotated[int, Query(100, ge=1, le=1000, description="Maximum number of templates to return (1-1000)")],
     offset: Annotated[int, Query(0, ge=0, description="Number of templates to skip for pagination")],
@@ -75,7 +76,7 @@ async def list_templates(
 async def get_template_details(
     template_id: str,
     _: Annotated[User, Depends(get_current_user)],
-    template_repository: TemplateRepositoryProtocol[AsyncSession],
+    template_repository: FromDishka[TemplateRepositoryProtocol[AsyncSession]],
 ) -> TemplateDetailsResponse:
     try:
         template_uuid = UUID(template_id)
