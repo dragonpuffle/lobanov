@@ -5,6 +5,8 @@ from lobanov.domain.entities.user import User
 from lobanov.protocols.repositories.user_repository_protocol import UserRepositoryProtocol
 from lobanov.protocols.services.password_manager_protocol import PasswordManagerProtocol
 
+MIN_PASSWORD_LENGTH = 8
+
 
 class UserAlreadyExistsError(Exception):
     pass
@@ -28,8 +30,8 @@ class RegisterUser[SessionT]:
         self.password_manager = password_manager
 
     async def execute(self, email: str, password: str, full_name: str) -> User:
-        if len(password) < 8:
-            err_msg = "Password must be at least 8 characters long"
+        if len(password) < MIN_PASSWORD_LENGTH:
+            err_msg = f"Password must be at least {MIN_PASSWORD_LENGTH} characters long"
             raise WeakPasswordError(err_msg)
 
         async with self.user_repository.context() as session:
