@@ -9,6 +9,7 @@ from .repositories import TranscriptRepositoryProtocol as TranscriptRepositoryPr
 from .repositories import UserRepositoryProtocol as UserRepositoryProtocol
 from .services import ClinicalExtractionProtocol as ClinicalExtractionProtocol
 from .services import FileStorageProtocol as FileStorageProtocol
+from .services import JWTTokenProtocol as JWTTokenProtocol
 from .services import PasswordManagerProtocol as PasswordManagerProtocol
 from .services import SpeechRecognitionProtocol as SpeechRecognitionProtocol
 from .services import TextProcessingProtocol as TextProcessingProtocol

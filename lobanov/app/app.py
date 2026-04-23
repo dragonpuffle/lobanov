@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 from lobanov.app.api.v1 import (
     audio_router,
+    auth_router,
     health_router,
     medical_documents_router,
     session_router,
@@ -80,6 +81,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(Exception, global_exception_handler)
     app.add_exception_handler(HTTPException, http_exception_handler)
 
+    app.include_router(auth_router, prefix="/api/v1")
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(session_router, prefix="/api/v1")
     app.include_router(audio_router, prefix="/api/v1")

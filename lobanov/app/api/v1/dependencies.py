@@ -29,6 +29,18 @@ class InactiveUserError(AuthenticationError):
     pass
 
 
+class UserAlreadyExistsError(AuthenticationError):
+    pass
+
+
+class InvalidCredentialsError(AuthenticationError):
+    pass
+
+
+class WeakPasswordError(AuthenticationError):
+    pass
+
+
 async def get_current_user[SessionT](
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
     user_repository: FromDishka[UserRepositoryProtocol[SessionT]],
@@ -58,6 +70,22 @@ async def get_current_user[SessionT](
 
 
 def authentication_exception_handler(_, exc: AuthenticationError):
+    if isinstance(exc, UserAlreadyExistsError):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    if isinstance(exc, InvalidCredentialsError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+    if isinstance(exc, WeakPasswordError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
     if isinstance(exc, InvalidTokenError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

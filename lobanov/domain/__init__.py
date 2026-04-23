@@ -1,5 +1,4 @@
 from . import entities as entities
-from . import value_objects as value_objects
 from .entities import AudioRecord as AudioRecord
 from .entities import ClinicalFact as ClinicalFact
 from .entities import DocumentationSession as DocumentationSession
@@ -11,6 +10,3 @@ from .entities import TemplateField as TemplateField
 from .entities import Transcript as Transcript
 from .entities import TranscriptLanguage as TranscriptLanguage
 from .entities import User as User
-from .value_objects import AudioFile as AudioFile
-from .value_objects import Email as Email
-from .value_objects import TranscriptText as TranscriptText

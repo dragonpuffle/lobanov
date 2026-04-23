@@ -1,5 +1,6 @@
 from . import postgres_models as postgres_models
 from . import repositories as repositories
+from . import services as services
 from .postgres_models import AudioRecord as AudioRecord
 from .postgres_models import Base as Base
 from .postgres_models import ClinicalFact as ClinicalFact
@@ -18,3 +19,9 @@ from .repositories import MedicalDocumentRepository as MedicalDocumentRepository
 from .repositories import TemplateRepository as TemplateRepository
 from .repositories import TranscriptRepository as TranscriptRepository
 from .repositories import UserRepository as UserRepository
+from .services import JWTTokenService as JWTTokenService
+from .services import LLMClinicalExtractionService as LLMClinicalExtractionService
+from .services import LocalFileStorageService as LocalFileStorageService
+from .services import PasswordManagerService as PasswordManagerService
+from .services import TextPreprocessingService as TextPreprocessingService
+from .services import WhisperSTTService as WhisperSTTService

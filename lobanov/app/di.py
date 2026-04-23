@@ -13,6 +13,7 @@ from lobanov.adapters.repositories import (
     UserRepository,
 )
 from lobanov.adapters.services import (
+    JWTTokenService,
     LLMClinicalExtractionService,
     LocalFileStorageService,
     PasswordManagerService,
@@ -21,6 +22,7 @@ from lobanov.adapters.services import (
 )
 from lobanov.infra.config import GlobalConfig
 from lobanov.infra.configs import (
+    JWTConfig,
     NLPConfig,
     STTConfig,
     StorageConfig,
@@ -38,11 +40,13 @@ from lobanov.protocols.repositories import (
 from lobanov.protocols.services import (
     ClinicalExtractionProtocol,
     FileStorageProtocol,
+    JWTTokenProtocol,
     PasswordManagerProtocol,
     SpeechRecognitionProtocol,
     TextProcessingProtocol,
 )
 from lobanov.usecases.audio import TranscribeAudio, UploadAudio
+from lobanov.usecases.auth import LoginUser, RegisterUser
 from lobanov.usecases.clinical_facts import ExtractClinicalFacts
 from lobanov.usecases.document_session import (
     CreateDocumentationSession,
@@ -160,6 +164,15 @@ class ServiceProvider(dishka.Provider):
             model=nlp_config.model,
         )
 
+    @dishka.provide
+    def provide_jwt_token_service(self, jwt_config: JWTConfig) -> JWTTokenProtocol:
+        """сервис управления JWT токенами"""
+        return JWTTokenService(
+            secret_key=jwt_config.secret_key,
+            algorithm=jwt_config.algorithm,
+            access_token_expire_minutes=jwt_config.access_token_expire_minutes,
+        )
+
     password_manager_service = dishka.provide(
         source=PasswordManagerService,
         provides=PasswordManagerProtocol,
@@ -170,6 +183,34 @@ class ServiceProvider(dishka.Provider):
 @final
 class UseCaseProvider(dishka.Provider):
     scope = dishka.Scope.REQUEST
+
+    @dishka.provide
+    def provide_register_user_usecase(
+        self,
+        user_repository: UserRepositoryProtocol[AsyncSession],
+        password_manager: PasswordManagerProtocol,
+    ) -> RegisterUser[AsyncSession]:
+        """юзкейс регистрации пользователя"""
+        return RegisterUser[AsyncSession](
+            user_repository=user_repository,
+            password_manager=password_manager,
+        )
+
+    @dishka.provide
+    def provide_login_user_usecase(
+        self,
+        user_repository: UserRepositoryProtocol[AsyncSession],
+        password_manager: PasswordManagerProtocol,
+        jwt_token_service: JWTTokenProtocol,
+        jwt_config: JWTConfig,
+    ) -> LoginUser[AsyncSession]:
+        """юзкейс входа пользователя"""
+        return LoginUser[AsyncSession](
+            user_repository=user_repository,
+            password_manager=password_manager,
+            jwt_token_service=jwt_token_service,
+            access_token_expire_minutes=jwt_config.access_token_expire_minutes,
+        )
 
     @dishka.provide
     def provide_create_documentation_session_usecase(
