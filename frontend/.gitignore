@@ -1,0 +1,5 @@
+node_modules
+dist
+*.local
+storybook-static
+coverage

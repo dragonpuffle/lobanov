@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import 'tailwindcss';
+@plugin 'tailwindcss-animate';
+
+@theme inline {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --color-background: oklch(0.99 0.005 250);
+  --color-foreground: oklch(0.2 0.02 250);
+  --color-card: oklch(0.99 0.005 250);
+  --color-card-foreground: oklch(0.2 0.02 250);
+  --color-popover: oklch(0.99 0.005 250);
+  --color-popover-foreground: oklch(0.2 0.02 250);
+  --color-primary: oklch(0.5 0.12 195);
+  --color-primary-foreground: oklch(0.99 0.01 200);
+  --color-secondary: oklch(0.95 0.02 250);
+  --color-secondary-foreground: oklch(0.25 0.03 250);
+  --color-muted: oklch(0.96 0.01 250);
+  --color-muted-foreground: oklch(0.45 0.02 250);
+  --color-accent: oklch(0.52 0.18 255);
+  --color-accent-foreground: oklch(0.99 0.01 250);
+  --color-destructive: oklch(0.5 0.2 25);
+  --color-destructive-foreground: oklch(0.99 0.01 25);
+  --color-border: oklch(0.9 0.01 250);
+  --color-input: oklch(0.9 0.01 250);
+  --color-ring: oklch(0.5 0.12 195);
+
+  --color-field-auto: oklch(0.55 0.12 195);
+  --color-field-user: oklch(0.5 0.2 300);
+  --color-field-missing: oklch(0.5 0.2 25);
+  --color-field-doubt: oklch(0.75 0.15 90);
+  --color-field-confirmed: oklch(0.55 0.15 150);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
+    --color-background: oklch(0.16 0.02 250);
+    --color-foreground: oklch(0.96 0.01 250);
+    --color-card: oklch(0.2 0.02 250);
+    --color-card-foreground: oklch(0.96 0.01 250);
+    --color-popover: oklch(0.2 0.02 250);
+    --color-popover-foreground: oklch(0.96 0.01 250);
+    --color-primary: oklch(0.7 0.1 195);
+    --color-primary-foreground: oklch(0.16 0.02 250);
+    --color-secondary: oklch(0.28 0.02 250);
+    --color-secondary-foreground: oklch(0.96 0.01 250);
+    --color-muted: oklch(0.25 0.02 250);
+    --color-muted-foreground: oklch(0.7 0.02 250);
+    --color-accent: oklch(0.6 0.16 255);
+    --color-border: oklch(0.3 0.02 250);
+    --color-input: oklch(0.3 0.02 250);
+  }
+  html {
+    @apply font-sans antialiased;
+  }
+  body {
+    @apply min-h-dvh bg-background text-foreground;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
