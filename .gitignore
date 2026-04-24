@@ -218,3 +218,5 @@ logs/
 storage/
 
 config.docker.toml
+
+tools/
