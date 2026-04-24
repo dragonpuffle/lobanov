@@ -6,11 +6,13 @@ environment = "development"
 debug = true
 log_level = "INFO"
 
-[database]
-url = "postgresql://user:password@localhost:5432/lobanov"
-echo = false
+[postgres]
+host = "localhost"
+port = 5432
+username = "user"
+password = "password"
+database = "lobanov"
 pool_size = 5
-max_overflow = 10
 
 [jwt]
 secret_key = "your-secret-key-here-change-in-production"
@@ -31,16 +33,35 @@ allowed_audio_formats = ["mp3", "wav", "m4a", "ogg", "flac"]
 document_path = "./storage/documents"
 max_document_size = 10485760
 
+# GPU: device = "cuda", compute_type = "float16" ()
+# CPU: device = "cpu", compute_type = "int8"
 [stt]
-model = "base"
-device = "cpu"
-language = "auto"
+provider = "whisper"
+model = "large-v3"
+device = "cuda"
+revision = ""
+language = "ru"
+compute_type = "float16"
+beam_size = 5
+vad_filter = true
+word_timestamps = true
+temperature = 0.0
+no_speech_threshold = 0.6
+condition_on_previous_text = true
+initial_prompt = "Медицинский диалог на русском языке. Сохраняй точные названия лекарств, диагнозов, чисел, дат и фамилий."
 
 [nlp]
+use_mock = false
 model = "gpt-3.5-turbo"
 api_key = "your-openai-api-key"
 max_tokens = 2000
-temperature = 0.3
+temperature = 0.0
+use_structured_output = true
+use_response_healing = true
+
+[text_preprocessing]
+lowercase = true
+remove_special_chars = true
 
 [celery]
 broker_url = "redis://localhost:6379/0"

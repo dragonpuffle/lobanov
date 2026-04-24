@@ -31,16 +31,37 @@ class StorageConfig(BaseModel):
 
 
 class STTConfig(BaseModel):
+    provider: str = Field(description="Speech-to-text provider (whisper/gigaam)")
     model: str = Field(description="Speech-to-text model name")
     device: str = Field(description="Device to run model on (cpu/cuda)")
-    language: str = Field(description="Language for speech recognition")
+    language: str = Field(description="Default language for speech recognition (e.g. ru)")
+    revision: str = Field(description="Model revision for Hugging Face (GigaAM); use empty string for Whisper")
+    compute_type: str = Field(description="Model compute type (e.g. int8, float16, float32)")
+    beam_size: int = Field(description="Beam size for decoder")
+    vad_filter: bool = Field(description="Enable VAD filtering")
+    word_timestamps: bool = Field(description="Return word timestamps from STT model")
+    temperature: float = Field(description="Decoding temperature for STT")
+    no_speech_threshold: float | None = Field(
+        default=None,
+        description="No speech threshold for decoding; omit from decoder when unset",
+    )
+    condition_on_previous_text: bool = Field(description="Condition segments on previous text")
+    initial_prompt: str = Field(description="Initial prompt for domain adaptation; empty string to disable")
 
 
 class NLPConfig(BaseModel):
+    use_mock: bool = Field(description="Use mock extractor instead of LLM")
     model: str = Field(description="NLP model name")
     api_key: str = Field(description="API key for NLP service")
     max_tokens: int = Field(description="Maximum tokens for NLP response")
     temperature: float = Field(description="Temperature for NLP generation")
+    use_structured_output: bool = Field(description="Use JSON schema structured output mode")
+    use_response_healing: bool = Field(description="Use response-healing plugin for malformed JSON recovery")
+
+
+class TextPreprocessingConfig(BaseModel):
+    lowercase: bool = Field(description="Lowercase text during cleaning")
+    remove_special_chars: bool = Field(description="Strip special characters during cleaning")
 
 
 class CeleryConfig(BaseModel):
@@ -51,3 +72,10 @@ class CeleryConfig(BaseModel):
 class RateLimitConfig(BaseModel):
     per_minute: int = Field(description="Requests per minute limit")
     per_hour: int = Field(description="Requests per hour limit")
+
+
+class HuggingFaceConfig(BaseModel):
+    token: str = Field(
+        default="",
+        description="Hugging Face Hub access token (read is enough for public models); empty = anonymous",
+    )

@@ -1,7 +1,9 @@
 import re
 from typing import override
 
+from lobanov.infra.configs import TextPreprocessingConfig
 from lobanov.protocols import TextProcessingProtocol
+from lobanov.utils.clinical_normalization import safe_normalize_transcript
 from lobanov.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -12,9 +14,9 @@ class TextProcessingError(Exception):
 
 
 class TextPreprocessingService(TextProcessingProtocol):
-    def __init__(self, lowercase: bool = True, remove_special_chars: bool = True):  # noqa: FBT001, FBT002
-        self.lowercase = lowercase
-        self.remove_special_chars = remove_special_chars
+    def __init__(self, text_preprocessing_config: TextPreprocessingConfig):
+        self.lowercase = text_preprocessing_config.lowercase
+        self.remove_special_chars = text_preprocessing_config.remove_special_chars
 
     @override
     async def preprocess_text(self, text: str) -> str:
@@ -23,7 +25,8 @@ class TextPreprocessingService(TextProcessingProtocol):
                 return text
 
             cleaned = await self.clean_text(text)
-            return await self.normalize_text(cleaned)
+            normalized = await self.normalize_text(cleaned)
+            return safe_normalize_transcript(normalized)
         except Exception as e:
             logger.exception("Failed to preprocess text")
             err_msg = f"Failed to preprocess text: {e}"

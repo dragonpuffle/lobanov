@@ -3,14 +3,13 @@ from uuid import UUID
 
 from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lobanov.app.api.v1.dependencies import get_current_user
 from lobanov.app.api.v1.medical_documents.dto import (
     ConfirmDocumentResponse,
     ExportDocumentRequest,
-    ExportDocumentResponse,
     FieldValueDTO,
     GenerateDocumentRequest,
     GenerateDocumentResponse,
@@ -378,14 +377,26 @@ async def confirm_document(
         ) from e
 
 
-@router.post("/export")
+@router.post(
+    "/export",
+    response_class=Response,
+    responses={
+        200: {
+            "content": {
+                "application/json": {},
+                "application/pdf": {},
+            },
+            "description": "Exported file (same bytes as stored under storage/documents).",
+        },
+    },
+)
 async def export_document(
     session_id: str,
     request: ExportDocumentRequest,
     _: Annotated[User, Depends(get_current_user)],
     medical_document_repository: FromDishka[MedicalDocumentRepositoryProtocol[AsyncSession]],
     save_document_use_case: FromDishka[SaveDocument[AsyncSession]],
-) -> ExportDocumentResponse:
+) -> Response:
     try:
         session_uuid = UUID(session_id)
 
@@ -396,14 +407,17 @@ async def export_document(
                 error_message = f"Document not found for session {session_id}"
                 raise MedicalDocumentNotFoundError(error_message)
 
-            file_path = await save_document_use_case.execute(
+            result = await save_document_use_case.execute(
                 document_id=document.id,
                 output_format=request.format,
             )
 
-            return ExportDocumentResponse(
-                task_id=str(document.id),
-                message=f"Document exported successfully to {file_path}",
+            return Response(
+                content=result.body,
+                media_type=result.media_type,
+                headers={
+                    "Content-Disposition": f'attachment; filename="{result.download_filename}"',
+                },
             )
     except ValueError as e:
         raise HTTPException(

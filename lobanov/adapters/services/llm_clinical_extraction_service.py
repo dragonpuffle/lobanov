@@ -1,5 +1,3 @@
-# ruff: noqa: E501
-
 import json
 from datetime import UTC, datetime
 from typing import override
@@ -8,11 +6,16 @@ from uuid import uuid4
 import httpx
 
 from lobanov.domain.entities.clinical_fact import ClinicalFact
+from lobanov.infra.configs import NLPConfig
 from lobanov.protocols import ClinicalExtractionProtocol
 from lobanov.protocols.services.clinical_extraction_protocol import TemplateField
+from lobanov.utils.clinical_normalization import normalize_fact_value, safe_normalize_transcript
 from lobanov.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+# OpenRouter retries: only step down on HTTP 400 (bad request / unsupported params).
+_OPENROUTER_RETRY_STATUS = 400
 
 _JSON_EXAMPLE = """{
   "complaints": {
@@ -28,7 +31,9 @@ class ClinicalExtractionError(Exception):
     pass
 
 
-def _parse_llm_json_object(content: str) -> dict:
+def _parse_llm_json_object(content: str | dict) -> dict:
+    if isinstance(content, dict):
+        return content
     text = content.strip()
     if text.startswith("```"):
         lines = text.splitlines()
@@ -45,10 +50,8 @@ def _parse_llm_json_object(content: str) -> dict:
 
 
 class LLMClinicalExtractionService(ClinicalExtractionProtocol):
-    def __init__(self, use_mock: bool = True, api_key: str | None = None, model: str = "gpt-4"):  # noqa: FBT001, FBT002
-        self.use_mock = use_mock
-        self.api_key = api_key
-        self.model = model
+    def __init__(self, nlp_config: NLPConfig):
+        self._nlp = nlp_config
 
     @override
     async def extract_clinical_facts(self, transcript: str, template_fields: list[TemplateField]) -> list[ClinicalFact]:
@@ -61,7 +64,7 @@ class LLMClinicalExtractionService(ClinicalExtractionProtocol):
 
             facts: list[ClinicalFact] = []
 
-            if self.use_mock:
+            if self._nlp.use_mock:
                 facts = await self._mock_extract_facts(transcript, template_fields)
             else:
                 facts = await self._llm_extract_facts(transcript, template_fields)
@@ -117,52 +120,66 @@ class LLMClinicalExtractionService(ClinicalExtractionProtocol):
 
         return facts
 
-    async def _llm_extract_facts(self, transcript: str, template_fields: list[TemplateField]) -> list[ClinicalFact]:
+    async def _llm_extract_facts(  # noqa: C901
+        self,
+        transcript: str,
+        template_fields: list[TemplateField],
+    ) -> list[ClinicalFact]:
         facts: list[ClinicalFact] = []
 
-        field_descriptions = "\n".join([f"- {field.name} ({field.label})" for field in template_fields])
+        field_descriptions = "\n".join([
+            (
+                f"- {field.name} ({field.label}) | required={field.is_required} | "
+                f"options={self._extract_options(field) or 'n/a'}"
+            )
+            for field in template_fields
+        ])
         field_names_quoted = ", ".join(f'"{f.name}"' for f in template_fields)
+        normalized_transcript = safe_normalize_transcript(transcript)
 
         prompt = f"""You extract structured clinical data from a medical dialog transcript.
 
 Template fields (use field_name exactly as listed):
 {field_descriptions}
 
-Transcript:
+Raw transcript:
 {transcript}
+
+Normalized transcript:
+{normalized_transcript}
 
 Output rules (strict):
 - Return ONE JSON object only. No markdown fences, no comments, no text before or after the JSON.
-- Top-level keys: one key per extracted fact. Each key should identify the field (preferably the field `name` from the list: {field_names_quoted}).
+- Top-level keys: one key per extracted fact. Each key should identify the field and must come from: {field_names_quoted}.
 - Each value MUST be an object with exactly these string/number fields:
   - "field_name": same as in the template list (field `name`, string)
   - "value": extracted value (string; use "" if nothing reliable)
   - "confidence": number from 0.0 to 1.0
-  - "source_text": a verbatim or minimal quote from the transcript that supports the value (string; the exact substring that will be searched in the full transcript)
+  - "source_text": a verbatim or minimal quote from Raw transcript that supports the value (string)
 - Include only fields where you have a meaningful value and supporting source_text from this transcript.
 - Do NOT put character position indices in the response.
+- Never invent medications or diagnoses that are absent from transcript.
 
 Example shape (keys and `field_name` must match your template):
 {_JSON_EXAMPLE}"""
 
         try:
-            if not self.api_key:
+            if not self._nlp.api_key:
                 raise ClinicalExtractionError("API key is required for LLM extraction")
 
             headers = {
-                "Authorization": f"Bearer {self.api_key}",
+                "Authorization": f"Bearer {self._nlp.api_key}",
                 "Content-Type": "application/json",
-                "HTTP-Referer": "https://github.com/lobanov/lobanov",
                 "X-Title": "Lobanov Clinical Documentation",
             }
 
             payload = {
-                "model": self.model,
+                "model": self._nlp.model,
                 "messages": [
                     {
                         "role": "system",
                         "content": (
-                            "You are a medical information extraction assistant. "
+                            "You are a medical information extraction assistant for Russian clinical dialogs. "
                             "Reply with a single JSON object only: top-level keys are field identifiers, "
                             "each value is an object with keys field_name, value, confidence, source_text. "
                             "No markdown, no extra prose."
@@ -170,9 +187,9 @@ Example shape (keys and `field_name` must match your template):
                     },
                     {"role": "user", "content": prompt},
                 ],
-                "temperature": 0.3,
+                "temperature": self._nlp.temperature,
+                "max_tokens": self._nlp.max_tokens,
             }
-
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(
                     "https://openrouter.ai/api/v1/chat/completions",
@@ -187,6 +204,7 @@ Example shape (keys and `field_name` must match your template):
                 extracted_data = _parse_llm_json_object(content)
 
                 field_name_to_id = {field.name: field.id for field in template_fields}
+                field_by_name = {field.name: field for field in template_fields}
 
                 for _top_key, item in extracted_data.items():
                     if not isinstance(item, dict):
@@ -198,10 +216,16 @@ Example shape (keys and `field_name` must match your template):
                     value = item.get("value", "")
                     if not isinstance(value, str):
                         value = str(value) if value is not None else ""
+                    value = normalize_fact_value(
+                        field_name,
+                        value,
+                        allowed_options=self._extract_options(field_by_name[field_name]),
+                    )
                     try:
                         confidence = float(item.get("confidence", 0.7))
                     except (TypeError, ValueError):
                         confidence = 0.7
+                    confidence = max(0.0, min(confidence, 1.0))
                     source_st = item.get("source_text", "")
                     if not isinstance(source_st, str):
                         source_st = str(source_st) if source_st is not None else ""
@@ -224,10 +248,20 @@ Example shape (keys and `field_name` must match your template):
 
         except Exception as e:
             logger.exception("LLM extraction failed")
-            err_msg = f"LLM extraction failed, falling back to mock extraction: {e}"
+            err_msg = f"LLM extraction failed: {e}"
             raise ClinicalExtractionError(err_msg) from e
 
         return facts
+
+    @staticmethod
+    def _extract_options(field: TemplateField) -> list[str]:
+        options_raw = field.options or {}
+        if isinstance(options_raw, dict):
+            values = options_raw.get("options", [])
+            if isinstance(values, list):
+                return [str(v) for v in values]
+        return []
+
 
     def _extract_value_for_field(self, transcript: str, field: TemplateField) -> str:
         field_name = field.name.lower()

@@ -101,7 +101,14 @@ export interface paths {
     post: {
       parameters: { path: { session_id: string } }
       requestBody: { content: { 'application/json': { format?: string } } }
-      responses: { 200: { content: { 'application/json': { task_id: string; message: string } } } }
+      responses: {
+        200: {
+          content: {
+            'application/json': Blob
+            'application/pdf': Blob
+          }
+        }
+      }
     }
   }
   '/api/v1/templates': {

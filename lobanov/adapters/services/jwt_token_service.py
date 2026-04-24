@@ -4,6 +4,7 @@ from uuid import UUID
 
 from jose import JWTError, jwt
 
+from lobanov.infra.configs import JWTConfig
 from lobanov.protocols.services.jwt_token_protocol import JWTTokenProtocol
 from lobanov.utils.logging import get_logger
 
@@ -15,10 +16,10 @@ class JWTTokenError(Exception):
 
 
 class JWTTokenService(JWTTokenProtocol):
-    def __init__(self, secret_key: str, algorithm: str, access_token_expire_minutes: int):
-        self.secret_key = secret_key
-        self.algorithm = algorithm
-        self.access_token_expire_minutes = access_token_expire_minutes
+    def __init__(self, jwt_config: JWTConfig):
+        self.secret_key = jwt_config.secret_key
+        self.algorithm = jwt_config.algorithm
+        self.access_token_expire_minutes = jwt_config.access_token_expire_minutes
 
     @override
     async def create_access_token(self, user_id: UUID, expires_delta: timedelta) -> str:

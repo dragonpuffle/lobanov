@@ -6,7 +6,7 @@ from lobanov.domain.entities.transcript import TranscriptLanguage
 
 
 class TranscribeRequest(BaseModel):
-    language: TranscriptLanguage = TranscriptLanguage.RU
+    language: TranscriptLanguage | None = None
 
 
 class TranscribeResponse(BaseModel):

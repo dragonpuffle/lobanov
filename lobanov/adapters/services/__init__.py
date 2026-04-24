@@ -1,9 +1,11 @@
+from . import gigaam_stt_service as gigaam_stt_service
 from . import jwt_token_service as jwt_token_service
 from . import llm_clinical_extraction_service as llm_clinical_extraction_service
 from . import local_file_storage_service as local_file_storage_service
 from . import password_manager_service as password_manager_service
 from . import text_preprocessing_service as text_preprocessing_service
 from . import whisper_stt_service as whisper_stt_service
+from .gigaam_stt_service import GigaAMSTTService as GigaAMSTTService
 from .jwt_token_service import JWTTokenService as JWTTokenService
 from .llm_clinical_extraction_service import LLMClinicalExtractionService as LLMClinicalExtractionService
 from .local_file_storage_service import LocalFileStorageService as LocalFileStorageService

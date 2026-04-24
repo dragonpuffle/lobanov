@@ -150,7 +150,7 @@ export function SessionWorkspacePage() {
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  disabled={gen.isPending}
+                  disabled={gen.isPending || session.status !== 'facts_extracted'}
                   onClick={() => void gen.mutateAsync({ sessionId: sid, templateId: session.template_id }).then(invalidate)}
                 >
                   {t('processing.generate')}

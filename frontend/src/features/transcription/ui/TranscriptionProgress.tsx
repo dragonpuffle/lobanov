@@ -14,6 +14,8 @@ export function TranscriptionProgress({ session, transcriptionInProgress = false
   const tr = session.has_transcript
   const doc = session.has_document
   const transcribingActive = Boolean(transcriptionInProgress && a && !tr)
+  const factsDone = doc || session.status === 'facts_extracted'
+  const factsRunning = Boolean(tr && !doc && session.status === 'transcribed')
   return (
     <ol className="max-w-md space-y-3" aria-live="polite">
       <li className="flex items-center gap-2">
@@ -31,8 +33,14 @@ export function TranscriptionProgress({ session, transcriptionInProgress = false
         <span>{t('processing.transcribing')}</span>
       </li>
       <li className="flex items-center gap-2">
-        {doc ? <Check className="text-field-confirmed size-5" /> : <Circle className="text-muted-foreground size-5" />}
-        <span>{t('processing.generating')}</span>
+        {factsDone ? (
+          <Check className="text-field-confirmed size-5" />
+        ) : factsRunning ? (
+          <Loader2 className="text-primary size-5 animate-spin" />
+        ) : (
+          <Circle className="text-muted-foreground size-5" />
+        )}
+        <span>{factsDone ? t('processing.factsExtracted') : t('processing.extractingFacts')}</span>
       </li>
     </ol>
   )

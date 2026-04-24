@@ -9,6 +9,7 @@ from lobanov.protocols.repositories import (
     TranscriptRepositoryProtocol,
 )
 from lobanov.protocols.services import ClinicalExtractionProtocol
+from lobanov.utils.clinical_normalization import fuzzy_source_span, normalize_fact_value
 from lobanov.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -25,7 +26,7 @@ def _source_indices_in_transcript(transcript_text: str, source_text: str) -> tup
     j = t_lower.find(s_lower)
     if j != -1:
         return j, j + len(source_text)
-    return 0, 0
+    return fuzzy_source_span(transcript_text, source_text)
 
 
 class TranscriptNotFoundError(Exception):
@@ -79,6 +80,7 @@ class ExtractClinicalFacts[SessionT]:
 
         template_fields = await self.template_repository.get_fields(session, template_id)
         if not template_fields:
+            await self._mark_facts_extracted(session, documentation_session)
             return []
 
         try:
@@ -92,8 +94,17 @@ class ExtractClinicalFacts[SessionT]:
 
         now = datetime.now(UTC)
         created_facts = []
+        field_by_id = {field.id: field for field in template_fields}
+        best_by_field: dict[UUID, ClinicalFact] = {}
 
         for fact in extracted_facts:
+            field = field_by_id.get(fact.template_field_id)
+            if field is None:
+                continue
+            options_raw = field.options or {}
+            options = options_raw.get("options", []) if isinstance(options_raw, dict) else []
+            normalized_value = normalize_fact_value(field.name, fact.value, allowed_options=options)
+            confidence = max(0.0, min(fact.confidence, 1.0))
             start_idx, end_idx = _source_indices_in_transcript(transcript.text, fact.source_text)
             clinical_fact = ClinicalFact(
                 id=uuid4(),
@@ -101,18 +112,28 @@ class ExtractClinicalFacts[SessionT]:
                 transcript_id=transcript_id,
                 template_field_id=fact.template_field_id,
                 is_updated_by_user=False,
-                value=fact.value,
-                confidence=fact.confidence,
+                value=normalized_value,
+                confidence=confidence,
                 source_text=fact.source_text,
                 source_start_index=start_idx,
                 source_end_index=end_idx,
                 created_at=now,
                 updated_at=now,
             )
+            existing_best = best_by_field.get(clinical_fact.template_field_id)
+            if existing_best is None or clinical_fact.confidence > existing_best.confidence:
+                best_by_field[clinical_fact.template_field_id] = clinical_fact
 
+        for clinical_fact in best_by_field.values():
             created_fact = await self.clinical_fact_repository.create(session, clinical_fact)
             created_facts.append(created_fact)
 
+        await self._mark_facts_extracted(session, documentation_session)
+
+        return created_facts
+
+    async def _mark_facts_extracted(self, session: SessionT, documentation_session: DocumentationSession) -> None:
+        now = datetime.now(UTC)
         updated_session = DocumentationSession(
             id=documentation_session.id,
             user_id=documentation_session.user_id,
@@ -122,5 +143,3 @@ class ExtractClinicalFacts[SessionT]:
             updated_at=now,
         )
         await self.session_repository.update(session, updated_session)
-
-        return created_facts

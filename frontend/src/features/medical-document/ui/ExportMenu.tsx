@@ -35,9 +35,19 @@ export function ExportMenu({ sessionId, disabled }: Props) {
           <DropdownMenuItem
             key={fmt}
             onSelect={() => {
-              void exp.mutateAsync({ sessionId, format: fmt }).then((d) => {
-                toast.success(d?.message ?? 'Exported', { description: d?.task_id })
-              })
+              void exp
+                .mutateAsync({ sessionId, format: fmt })
+                .then(({ blob, filename }) => {
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = filename
+                  a.click()
+                  URL.revokeObjectURL(url)
+                })
+                .catch((e: Error) => {
+                  toast.error(e.message)
+                })
             }}
           >
             {fmt.toUpperCase()}

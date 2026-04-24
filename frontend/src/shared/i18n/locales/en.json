@@ -43,7 +43,8 @@
     "transcribe": "Start transcription",
     "transcribing": "Transcribing…",
     "generate": "Generate document",
-    "generating": "Generating document…"
+    "extractingFacts": "Extracting clinical facts…",
+    "factsExtracted": "Clinical facts extracted"
   },
   "document": {
     "transcript": "Transcript",

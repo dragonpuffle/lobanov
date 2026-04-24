@@ -42,7 +42,7 @@ class TranscribeAudio[SessionT]:
         self.transcript_repository = transcript_repository
         self.stt_service = stt_service
 
-    async def execute(self, session_id: UUID, language: str = "ru") -> Transcript:
+    async def execute(self, session_id: UUID, language: str) -> Transcript:
         async with self.session_repository.context() as session:
             documentation_session = await self.session_repository.get_by_id(session, session_id)
             if documentation_session is None:

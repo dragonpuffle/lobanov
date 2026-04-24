@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lobanov.app.api.v1.dependencies import get_current_user
 from lobanov.app.api.v1.transcription.dto import TranscribeRequest, TranscribeResponse, TranscriptResponse
 from lobanov.domain.entities.user import User
+from lobanov.infra.configs import STTConfig
 from lobanov.protocols.repositories import TranscriptRepositoryProtocol
 from lobanov.usecases.audio import ProcessTranscriptionBackgroundTask
 
@@ -50,16 +51,18 @@ async def transcribe_audio(
     session_id: str,
     request: TranscribeRequest,
     background_tasks: BackgroundTasks,
+    stt_config: FromDishka[STTConfig],
     process_transcription_bg_task: FromDishka[ProcessTranscriptionBackgroundTask[AsyncSession]],
 ) -> TranscribeResponse:
     try:
         session_uuid = UUID(session_id)
         task_id = uuid4()
+        language = request.language.value if request.language is not None else stt_config.language
 
         background_tasks.add_task(
             process_transcription_bg_task.execute,
             session_id=session_uuid,
-            language=request.language,
+            language=language,
         )
 
         return TranscribeResponse(

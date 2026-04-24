@@ -36,15 +36,12 @@ class ProcessTranscriptionBackgroundTask[SessionT]:
     def __init__(self, dependencies: TranscriptionDependencies[SessionT]):
         self.dependencies = dependencies
 
-    async def execute(self, session_id: UUID, language: str = "ru") -> None:
+    async def execute(self, session_id: UUID, language: str) -> None:
         try:
             transcript = await self.dependencies.transcribe_audio.execute(session_id, language)
 
             async with self.dependencies.session_repository.context() as session:
-                updated_transcript = await self.dependencies.preprocess_transcript.execute(session, transcript.id)
-
-            async with self.dependencies.session_repository.context() as session:
-                await self.dependencies.extract_clinical_facts.execute(session, updated_transcript.id)
+                await self.dependencies.extract_clinical_facts.execute(session, transcript.id)
 
         except Exception as e:
             logger.exception("Background transcription task failed for session {sid}", sid=session_id)

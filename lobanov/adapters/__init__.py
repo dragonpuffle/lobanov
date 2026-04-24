@@ -19,6 +19,7 @@ from .repositories import MedicalDocumentRepository as MedicalDocumentRepository
 from .repositories import TemplateRepository as TemplateRepository
 from .repositories import TranscriptRepository as TranscriptRepository
 from .repositories import UserRepository as UserRepository
+from .services import GigaAMSTTService as GigaAMSTTService
 from .services import JWTTokenService as JWTTokenService
 from .services import LLMClinicalExtractionService as LLMClinicalExtractionService
 from .services import LocalFileStorageService as LocalFileStorageService

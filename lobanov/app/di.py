@@ -16,6 +16,7 @@ from lobanov.adapters.repositories import (
     UserRepository,
 )
 from lobanov.adapters.services import (
+    GigaAMSTTService,
     JWTTokenService,
     LLMClinicalExtractionService,
     LocalFileStorageService,
@@ -29,6 +30,7 @@ from lobanov.infra.configs import (
     NLPConfig,
     STTConfig,
     StorageConfig,
+    TextPreprocessingConfig,
 )
 from lobanov.infra.postgres import provide_async_engine, provide_async_session_factory
 from lobanov.protocols.repositories import (
@@ -147,42 +149,30 @@ class ServiceProvider(dishka.Provider):
     @dishka.provide
     def provide_file_storage_service(self, storage_config: StorageConfig) -> FileStorageProtocol:
         """сервис локального хранения файлов"""
-        return LocalFileStorageService(
-            base_path=storage_config.audio_path,
-            max_file_size=storage_config.max_audio_size,
-        )
+        return LocalFileStorageService(storage_config)
 
     @dishka.provide
     def provide_speech_recognition_service(self, stt_config: STTConfig) -> SpeechRecognitionProtocol:
         """сервис распознавания речи на основе Whisper"""
-        return WhisperSTTService(
-            model_size=stt_config.model,
-            device=stt_config.device,
-            compute_type="int8",
-        )
+        provider = stt_config.provider.lower().strip()
+        if provider == "gigaam":
+            return GigaAMSTTService(stt_config)
+        return WhisperSTTService(stt_config)
 
     @dishka.provide
-    def provide_text_preprocessing_service(self) -> TextProcessingProtocol:
+    def provide_text_preprocessing_service(self, text_cfg: TextPreprocessingConfig) -> TextProcessingProtocol:
         """сервис предобработки текста"""
-        return TextPreprocessingService()
+        return TextPreprocessingService(text_cfg)
 
     @dishka.provide
     def provide_clinical_extraction_service(self, nlp_config: NLPConfig) -> ClinicalExtractionProtocol:
         """сервис извлечения клинической информации на основе LLM"""
-        return LLMClinicalExtractionService(
-            use_mock=False,
-            api_key=nlp_config.api_key,
-            model=nlp_config.model,
-        )
+        return LLMClinicalExtractionService(nlp_config)
 
     @dishka.provide
     def provide_jwt_token_service(self, jwt_config: JWTConfig) -> JWTTokenProtocol:
         """сервис управления JWT токенами"""
-        return JWTTokenService(
-            secret_key=jwt_config.secret_key,
-            algorithm=jwt_config.algorithm,
-            access_token_expire_minutes=jwt_config.access_token_expire_minutes,
-        )
+        return JWTTokenService(jwt_config)
 
     password_manager_service = dishka.provide(
         source=PasswordManagerService,
@@ -220,7 +210,7 @@ class UseCaseProvider(dishka.Provider):
             user_repository=user_repository,
             password_manager=password_manager,
             jwt_token_service=jwt_token_service,
-            access_token_expire_minutes=jwt_config.access_token_expire_minutes,
+            jwt_config=jwt_config,
         )
 
     @dishka.provide

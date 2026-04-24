@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from lobanov.domain import User
+from lobanov.infra.configs import JWTConfig
 from lobanov.protocols.repositories.user_repository_protocol import UserRepositoryProtocol
 from lobanov.protocols.services.jwt_token_protocol import JWTTokenProtocol
 from lobanov.protocols.services.password_manager_protocol import PasswordManagerProtocol
@@ -28,12 +29,12 @@ class LoginUser[SessionT]:
         user_repository: UserRepositoryProtocol[SessionT],
         password_manager: PasswordManagerProtocol,
         jwt_token_service: JWTTokenProtocol,
-        access_token_expire_minutes: int,
+        jwt_config: JWTConfig,
     ):
         self.user_repository = user_repository
         self.password_manager = password_manager
         self.jwt_token_service = jwt_token_service
-        self.access_token_expire_minutes = access_token_expire_minutes
+        self.jwt_config = jwt_config
 
     @dataclass
     class LoginResult:
@@ -67,7 +68,7 @@ class LoginUser[SessionT]:
                 raise InactiveUserError(error_message)
 
         try:
-            expires_delta = timedelta(minutes=self.access_token_expire_minutes)
+            expires_delta = timedelta(minutes=self.jwt_config.access_token_expire_minutes)
             access_token = await self.jwt_token_service.create_access_token(user.id, expires_delta)
             expires_in = int(expires_delta.total_seconds())
         except Exception as e:

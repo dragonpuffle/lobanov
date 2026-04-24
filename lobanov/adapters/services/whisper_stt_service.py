@@ -1,4 +1,6 @@
+import asyncio
 from datetime import UTC, datetime
+from math import exp
 from typing import override
 from uuid import uuid4
 
@@ -6,6 +8,7 @@ import aiofiles.os
 from faster_whisper import WhisperModel
 
 from lobanov.domain.entities.transcript import Transcript, TranscriptLanguage
+from lobanov.infra.configs import STTConfig
 from lobanov.protocols import SpeechRecognitionProtocol
 from lobanov.utils.logging import get_logger
 
@@ -17,16 +20,30 @@ class SpeechRecognitionError(Exception):
 
 
 class WhisperSTTService(SpeechRecognitionProtocol):
-    def __init__(self, model_size: str = "base", device: str = "cpu", compute_type: str = "int8"):
-        self.model_size = model_size
-        self.device = device
-        self.compute_type = compute_type
-        self._model = None
+    def __init__(self, stt_config: STTConfig):
+        self._stt = stt_config
+        prompt = stt_config.initial_prompt.strip()
+        self.initial_prompt: str | None = prompt or None
+        self._model: WhisperModel | None = None
+        self._model_lock = asyncio.Lock()
 
-    @property
-    def model(self) -> WhisperModel:
-        if self._model is None:
-            self._model = WhisperModel(self.model_size, device=self.device, compute_type=self.compute_type)
+    async def _get_model(self) -> WhisperModel:
+        if self._model is not None:
+            return self._model
+        async with self._model_lock:
+            if self._model is not None:
+                return self._model
+            logger.info(
+                "Loading Whisper model {model!r} (device={device!r}); first run may download weights",
+                model=self._stt.model,
+                device=self._stt.device,
+            )
+            self._model = await asyncio.to_thread(
+                WhisperModel,
+                self._stt.model,
+                device=self._stt.device,
+                compute_type=self._stt.compute_type,
+            )
         return self._model
 
     def _parse_language(self, language: str) -> str:
@@ -36,6 +53,24 @@ class WhisperSTTService(SpeechRecognitionProtocol):
         }
         return language_map.get(language, language[:2])
 
+    async def _transcribe(self, file_path: str, whisper_language: str):
+        kwargs: dict[str, object] = {
+            "language": whisper_language,
+            "beam_size": self._stt.beam_size,
+            "vad_filter": self._stt.vad_filter,
+            "word_timestamps": self._stt.word_timestamps,
+            "temperature": self._stt.temperature,
+            "condition_on_previous_text": self._stt.condition_on_previous_text,
+        }
+        if self._stt.no_speech_threshold is not None:
+            kwargs["no_speech_threshold"] = self._stt.no_speech_threshold
+
+        if self.initial_prompt:
+            kwargs["initial_prompt"] = self.initial_prompt
+
+        model = await self._get_model()
+        return await asyncio.to_thread(model.transcribe, file_path, **kwargs)
+
     @override
     async def transcribe_audio(self, file_path: str, language: str) -> Transcript:
         if not await aiofiles.os.path.exists(file_path):
@@ -44,21 +79,19 @@ class WhisperSTTService(SpeechRecognitionProtocol):
 
         try:
             whisper_language = self._parse_language(language)
-
-            segments, _ = self.model.transcribe(
-                file_path, language=whisper_language, beam_size=5, vad_filter=True, word_timestamps=True
-            )
+            segments, _ = await self._transcribe(file_path, whisper_language)
             # faster-whisper returns a generator; we need a list for len() and multiple passes
             segments = list(segments)
 
-            full_text = " ".join([segment.text for segment in segments])
+            full_text = "".join([segment.text for segment in segments])
+            full_text = " ".join(full_text.split())
             full_text = full_text.strip()
 
             avg_probability = 0.0
             confidence_score = 0.0
             if segments:
-                total_prob = sum(segment.avg_logprob for segment in segments if segment.avg_logprob > 0)
-                avg_probability = total_prob / len(segments) if segments else 0.0
+                probabilities = [max(min(exp(segment.avg_logprob), 1.0), 0.0) for segment in segments]
+                avg_probability = sum(probabilities) / len(probabilities)
                 confidence_score = min(max(avg_probability, 0.0), 1.0)
 
             transcript_language = TranscriptLanguage.RU if whisper_language == "ru" else TranscriptLanguage.RU  # noqa: RUF034

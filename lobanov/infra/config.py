@@ -1,17 +1,20 @@
 from collections.abc import Callable
 from typing import ClassVar, override
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict, TomlConfigSettingsSource
 
 from lobanov.infra.configs import (
     AppConfig,
     CORSConfig,
     CeleryConfig,
+    HuggingFaceConfig,
     JWTConfig,
     NLPConfig,
     RateLimitConfig,
     STTConfig,
     StorageConfig,
+    TextPreprocessingConfig,
 )
 from lobanov.infra.postgres import PostgresConfig
 
@@ -26,8 +29,10 @@ class GlobalConfig(BaseSettings):
     storage: StorageConfig
     stt: STTConfig
     nlp: NLPConfig
+    text_preprocessing: TextPreprocessingConfig
     celery: CeleryConfig
     rate_limit: RateLimitConfig
+    huggingface: HuggingFaceConfig = Field(default_factory=HuggingFaceConfig)
 
     @classmethod
     def load(cls) -> "GlobalConfig":
