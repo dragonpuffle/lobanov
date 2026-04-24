@@ -1,4 +1,5 @@
 import json
+from dataclasses import dataclass
 from uuid import UUID
 
 from lobanov.domain.entities.clinical_fact import ClinicalFact
@@ -32,6 +33,16 @@ class TranscriptNotFoundError(Exception):
     pass
 
 
+@dataclass(frozen=True)
+class SavedDocumentExport:
+    """Server storage path plus the same bytes returned to the client for download."""
+
+    stored_path: str
+    body: bytes
+    download_filename: str
+    media_type: str
+
+
 class SaveDocument[SessionT]:
     def __init__(  # noqa: PLR0913
         self,
@@ -53,7 +64,7 @@ class SaveDocument[SessionT]:
         self,
         document_id: UUID,
         output_format: str = "json",
-    ) -> str:
+    ) -> SavedDocumentExport:
         try:
             return await self._execute(document_id, output_format)
         except (MedicalDocumentNotFoundError, InvalidDocumentStateError, TranscriptNotFoundError, ValueError):
@@ -66,7 +77,7 @@ class SaveDocument[SessionT]:
         self,
         document_id: UUID,
         output_format: str = "json",
-    ) -> str:
+    ) -> SavedDocumentExport:
         async with self.medical_document_repository.context() as session:
             document = await self.medical_document_repository.get_by_id(session, document_id)
             if document is None:
@@ -89,18 +100,28 @@ class SaveDocument[SessionT]:
 
             fmt = output_format.lower()
             content: str | bytes
+            media_type: str
             if fmt == "json":
                 content = self._export_to_json(document, transcript, clinical_facts, template_fields)
                 filename = f"document_{document_id}.json"
+                media_type = "application/json; charset=utf-8"
             elif fmt == "pdf":
                 field_by_name = self._field_values_by_name(clinical_facts, template_fields)
                 content = self._render_consultation_protocol_pdf.execute(field_by_name, document)
                 filename = f"document_{document_id}.pdf"
+                media_type = "application/pdf"
             else:
                 error_message = f"Unsupported format: {output_format}. Supported: json, pdf."
                 raise ValueError(error_message)
 
-            return await self.file_storage.save_document(content, filename, document.session_id)
+            stored_path = await self.file_storage.save_document(content, filename, document.session_id)
+            body = content.encode("utf-8") if isinstance(content, str) else content
+            return SavedDocumentExport(
+                stored_path=stored_path,
+                body=body,
+                download_filename=filename,
+                media_type=media_type,
+            )
 
     def _field_values_by_name(
         self,

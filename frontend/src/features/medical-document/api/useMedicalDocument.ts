@@ -1,7 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/shared/api/client'
+import { getAccessToken } from '@/shared/api/token-bridge'
+import { API_BASE } from '@/shared/config/env'
 import { qk } from '@/shared/api/queryKeys'
 import type { MedicalDocumentDetailsResponse } from '@/shared/api/types'
+
+function parseFilenameFromContentDisposition(header: string | null, fallback: string): string {
+  if (!header) return fallback
+  const m = /filename\*=UTF-8''([^;]+)|filename="([^"]+)"|filename=([^;]+)/i.exec(header)
+  if (m) {
+    const raw = (m[1] ?? m[2] ?? m[3]).trim()
+    try {
+      return decodeURIComponent(raw)
+    } catch {
+      return raw
+    }
+  }
+  return fallback
+}
 
 export function useGenerateDocument() {
   const qc = useQueryClient()
@@ -106,12 +122,29 @@ export function useConfirmDocument() {
 export function useExportDocument() {
   return useMutation({
     mutationFn: async ({ sessionId, format }: { sessionId: string; format: string }) => {
-      const { data, error } = await api.POST('/api/v1/sessions/{session_id}/document/export', {
-        params: { path: { session_id: sessionId } },
-        body: { format },
+      const token = getAccessToken()
+      const res = await fetch(`${API_BASE}/api/v1/sessions/${sessionId}/document/export`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ format }),
       })
-      if (error) throw new Error(String((error as { detail?: string }).detail ?? 'Export failed'))
-      return data
+      if (!res.ok) {
+        let detail = 'Export failed'
+        try {
+          const j = (await res.json()) as { detail?: unknown }
+          detail = String(j.detail ?? detail)
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail)
+      }
+      const blob = await res.blob()
+      const fallback = format === 'pdf' ? 'document.pdf' : 'document.json'
+      const filename = parseFilenameFromContentDisposition(res.headers.get('Content-Disposition'), fallback)
+      return { blob, filename }
     },
   })
 }

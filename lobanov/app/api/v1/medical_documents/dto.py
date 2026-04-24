@@ -91,8 +91,3 @@ class ConfirmDocumentResponse(BaseModel):
 
 class ExportDocumentRequest(BaseModel):
     format: str = "json"
-
-
-class ExportDocumentResponse(BaseModel):
-    task_id: str
-    message: str
