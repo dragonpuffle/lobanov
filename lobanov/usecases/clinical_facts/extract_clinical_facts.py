@@ -14,6 +14,20 @@ from lobanov.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _source_indices_in_transcript(transcript_text: str, source_text: str) -> tuple[int, int]:
+    if not source_text or not transcript_text:
+        return 0, 0
+    i = transcript_text.find(source_text)
+    if i != -1:
+        return i, i + len(source_text)
+    t_lower = transcript_text.lower()
+    s_lower = source_text.lower()
+    j = t_lower.find(s_lower)
+    if j != -1:
+        return j, j + len(source_text)
+    return 0, 0
+
+
 class TranscriptNotFoundError(Exception):
     pass
 
@@ -80,6 +94,7 @@ class ExtractClinicalFacts[SessionT]:
         created_facts = []
 
         for fact in extracted_facts:
+            start_idx, end_idx = _source_indices_in_transcript(transcript.text, fact.source_text)
             clinical_fact = ClinicalFact(
                 id=uuid4(),
                 session_id=transcript.session_id,
@@ -89,8 +104,8 @@ class ExtractClinicalFacts[SessionT]:
                 value=fact.value,
                 confidence=fact.confidence,
                 source_text=fact.source_text,
-                source_start_index=fact.source_start_index,
-                source_end_index=fact.source_end_index,
+                source_start_index=start_idx,
+                source_end_index=end_idx,
                 created_at=now,
                 updated_at=now,
             )

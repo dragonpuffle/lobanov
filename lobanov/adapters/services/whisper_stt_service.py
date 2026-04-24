@@ -48,6 +48,8 @@ class WhisperSTTService(SpeechRecognitionProtocol):
             segments, _ = self.model.transcribe(
                 file_path, language=whisper_language, beam_size=5, vad_filter=True, word_timestamps=True
             )
+            # faster-whisper returns a generator; we need a list for len() and multiple passes
+            segments = list(segments)
 
             full_text = " ".join([segment.text for segment in segments])
             full_text = full_text.strip()

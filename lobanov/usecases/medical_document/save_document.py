@@ -12,6 +12,9 @@ from lobanov.protocols.repositories import (
     TranscriptRepositoryProtocol,
 )
 from lobanov.protocols.services import FileStorageProtocol
+from lobanov.usecases.medical_document.consultation_protocol_pdf import (
+    RenderConsultationProtocolPdf,
+)
 from lobanov.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -30,19 +33,21 @@ class TranscriptNotFoundError(Exception):
 
 
 class SaveDocument[SessionT]:
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         medical_document_repository: MedicalDocumentRepositoryProtocol[SessionT],
         transcript_repository: TranscriptRepositoryProtocol[SessionT],
         clinical_fact_repository: ClinicalFactRepositoryProtocol[SessionT],
         template_repository: TemplateRepositoryProtocol[SessionT],
         file_storage: FileStorageProtocol,
+        render_consultation_protocol_pdf: RenderConsultationProtocolPdf,
     ):
         self.medical_document_repository = medical_document_repository
         self.transcript_repository = transcript_repository
         self.clinical_fact_repository = clinical_fact_repository
         self.template_repository = template_repository
         self.file_storage = file_storage
+        self._render_consultation_protocol_pdf = render_consultation_protocol_pdf
 
     async def execute(
         self,
@@ -82,14 +87,45 @@ class SaveDocument[SessionT]:
             clinical_facts = await self.clinical_fact_repository.get_by_session_id(session, document.session_id)
             template_fields = await self.template_repository.get_fields(session, document.template_id)
 
-            if output_format.lower() == "json":
+            fmt = output_format.lower()
+            content: str | bytes
+            if fmt == "json":
                 content = self._export_to_json(document, transcript, clinical_facts, template_fields)
                 filename = f"document_{document_id}.json"
+            elif fmt == "pdf":
+                field_by_name = self._field_values_by_name(clinical_facts, template_fields)
+                content = self._render_consultation_protocol_pdf.execute(field_by_name, document)
+                filename = f"document_{document_id}.pdf"
             else:
-                error_message = f"Unsupported format: {output_format}. Only 'json' is supported."
+                error_message = f"Unsupported format: {output_format}. Supported: json, pdf."
                 raise ValueError(error_message)
 
             return await self.file_storage.save_document(content, filename, document.session_id)
+
+    def _field_values_by_name(
+        self,
+        clinical_facts: list[ClinicalFact],
+        template_fields: list[TemplateField],
+    ) -> dict[str, str]:
+        facts_by_template_field_id: dict = {}
+        for fact in clinical_facts:
+            if fact.template_field_id not in facts_by_template_field_id:
+                facts_by_template_field_id[fact.template_field_id] = []
+            facts_by_template_field_id[fact.template_field_id].append({
+                "value": fact.value,
+                "confidence": fact.confidence,
+            })
+
+        out: dict[str, str] = {}
+        for field in template_fields:
+            matching_facts = facts_by_template_field_id.get(field.id, [])
+            if matching_facts:
+                best_fact = max(matching_facts, key=lambda f: f["confidence"])
+                if best_fact["value"] is not None:
+                    out[field.name] = str(best_fact["value"])
+            elif field.default_value:
+                out[field.name] = str(field.default_value)
+        return out
 
     def _export_to_json(
         self,

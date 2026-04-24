@@ -36,10 +36,8 @@ class TemplateNotFoundError(TemplateHandlerError):
 async def list_templates(
     _: Annotated[User, Depends(get_current_user)],
     template_repository: FromDishka[TemplateRepositoryProtocol[AsyncSession]],
-    active_only: Annotated[bool, Query(description="Filter to show only active templates")] = True,
-    limit: Annotated[
-        int, Query(ge=1, le=1000, description="Maximum number of templates to return (1-1000)")
-    ] = 100,
+    active_only: Annotated[bool, Query(description="Filter to show only active templates")] = True,  # noqa: FBT002
+    limit: Annotated[int, Query(ge=1, le=1000, description="Maximum number of templates to return (1-1000)")] = 100,
     offset: Annotated[int, Query(ge=0, description="Number of templates to skip for pagination")] = 0,
 ) -> TemplateListResponse:
     try:

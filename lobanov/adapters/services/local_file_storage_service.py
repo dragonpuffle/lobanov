@@ -102,7 +102,7 @@ class LocalFileStorageService(FileStorageProtocol):
             return True
 
     @override
-    async def save_document(self, content: str, filename: str, session_id: UUID) -> str:
+    async def save_document(self, content: str | bytes, filename: str, session_id: UUID) -> str:
         self._validate_document_format(filename)
 
         session_dir = self.documents_path / str(session_id)
@@ -111,8 +111,12 @@ class LocalFileStorageService(FileStorageProtocol):
         file_path = session_dir / filename
 
         try:
-            async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
-                await f.write(content)
+            if isinstance(content, bytes):
+                async with aiofiles.open(file_path, "wb") as f:
+                    await f.write(content)
+            else:
+                async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
+                    await f.write(content)
         except Exception as e:
             logger.exception("Failed to save document")
             err_msg = f"Failed to save document: {e}"

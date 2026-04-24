@@ -68,8 +68,15 @@ class GenerateMedicalDocument[SessionT]:
                 error_message = f"Session with id {session_id} not found"
                 raise SessionNotFoundError(error_message)
 
-            if documentation_session.status != DocumentationSessionStatus.TRANSCRIBED:
-                error_message = f"Session must be in TRANSCRIBED state, current state: {documentation_session.status}"
+            allowed = (
+                DocumentationSessionStatus.TRANSCRIBED,
+                DocumentationSessionStatus.FACTS_EXTRACTED,
+            )
+            if documentation_session.status not in allowed:
+                error_message = (
+                    f"Session must be in {allowed[0]!r} or {allowed[1]!r} state, "
+                    f"current state: {documentation_session.status}"
+                )
                 raise InvalidSessionStateError(error_message)
 
             transcript = await self.transcript_repository.get_by_session_id(session, session_id)

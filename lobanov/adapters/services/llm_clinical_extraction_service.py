@@ -1,3 +1,5 @@
+# ruff: noqa: E501
+
 import json
 from datetime import UTC, datetime
 from typing import override
@@ -12,9 +14,34 @@ from lobanov.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+_JSON_EXAMPLE = """{
+  "complaints": {
+    "field_name": "complaints",
+    "value": "боль в груди",
+    "confidence": 0.9,
+    "source_text": "жалуется на боль в груди"
+  }
+}"""
+
 
 class ClinicalExtractionError(Exception):
     pass
+
+
+def _parse_llm_json_object(content: str) -> dict:
+    text = content.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines)
+    data = json.loads(text)
+    if not isinstance(data, dict):
+        msg = "LLM response must be a JSON object, not a list or other type"
+        raise ClinicalExtractionError(msg)
+    return data
 
 
 class LLMClinicalExtractionService(ClinicalExtractionProtocol):
@@ -94,23 +121,29 @@ class LLMClinicalExtractionService(ClinicalExtractionProtocol):
         facts: list[ClinicalFact] = []
 
         field_descriptions = "\n".join([f"- {field.name} ({field.label})" for field in template_fields])
+        field_names_quoted = ", ".join(f'"{f.name}"' for f in template_fields)
 
-        prompt = f"""Extract clinical information from the following medical transcript.
+        prompt = f"""You extract structured clinical data from a medical dialog transcript.
 
-Template fields to extract:
+Template fields (use field_name exactly as listed):
 {field_descriptions}
 
 Transcript:
 {transcript}
 
-For each field found, provide:
-1. Field name
-2. Extracted value
-3. Confidence score (0.0 to 1.0)
-4. Source text from transcript
-5. Start and end indices of source text
+Output rules (strict):
+- Return ONE JSON object only. No markdown fences, no comments, no text before or after the JSON.
+- Top-level keys: one key per extracted fact. Each key should identify the field (preferably the field `name` from the list: {field_names_quoted}).
+- Each value MUST be an object with exactly these string/number fields:
+  - "field_name": same as in the template list (field `name`, string)
+  - "value": extracted value (string; use "" if nothing reliable)
+  - "confidence": number from 0.0 to 1.0
+  - "source_text": a verbatim or minimal quote from the transcript that supports the value (string; the exact substring that will be searched in the full transcript)
+- Include only fields where you have a meaningful value and supporting source_text from this transcript.
+- Do NOT put character position indices in the response.
 
-Respond in JSON format with a list of facts."""
+Example shape (keys and `field_name` must match your template):
+{_JSON_EXAMPLE}"""
 
         try:
             if not self.api_key:
@@ -128,7 +161,12 @@ Respond in JSON format with a list of facts."""
                 "messages": [
                     {
                         "role": "system",
-                        "content": "You are a medical information extraction assistant. Extract clinical facts from medical transcripts and return them in JSON format.",  # noqa: E501
+                        "content": (
+                            "You are a medical information extraction assistant. "
+                            "Reply with a single JSON object only: top-level keys are field identifiers, "
+                            "each value is an object with keys field_name, value, confidence, source_text. "
+                            "No markdown, no extra prose."
+                        ),
                     },
                     {"role": "user", "content": prompt},
                 ],
@@ -146,16 +184,27 @@ Respond in JSON format with a list of facts."""
 
                 content = result["choices"][0]["message"]["content"]
 
-                extracted_data = json.loads(content)
+                extracted_data = _parse_llm_json_object(content)
 
                 field_name_to_id = {field.name: field.id for field in template_fields}
 
-                for item in extracted_data:
-                    field_name = item.get("field_name", "")
+                for _top_key, item in extracted_data.items():
+                    if not isinstance(item, dict):
+                        continue
+                    field_name = str(item.get("field_name", "") or _top_key).strip()
                     template_field_id = field_name_to_id.get(field_name)
-
                     if not template_field_id:
                         continue
+                    value = item.get("value", "")
+                    if not isinstance(value, str):
+                        value = str(value) if value is not None else ""
+                    try:
+                        confidence = float(item.get("confidence", 0.7))
+                    except (TypeError, ValueError):
+                        confidence = 0.7
+                    source_st = item.get("source_text", "")
+                    if not isinstance(source_st, str):
+                        source_st = str(source_st) if source_st is not None else ""
 
                     fact = ClinicalFact(
                         id=uuid4(),
@@ -163,11 +212,11 @@ Respond in JSON format with a list of facts."""
                         transcript_id=uuid4(),
                         template_field_id=template_field_id,
                         is_updated_by_user=False,
-                        value=item.get("value", ""),
-                        confidence=item.get("confidence", 0.7),
-                        source_text=item.get("source_text", ""),
-                        source_start_index=item.get("start_index", 0),
-                        source_end_index=item.get("end_index", 0),
+                        value=value,
+                        confidence=confidence,
+                        source_text=source_st,
+                        source_start_index=0,
+                        source_end_index=0,
                         created_at=datetime.now(UTC),
                         updated_at=datetime.now(UTC),
                     )

@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { qk } from '@/shared/api/queryKeys'
 import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 export function SessionWorkspacePage() {
   const { t } = useTranslation()
@@ -35,6 +35,21 @@ export function SessionWorkspacePage() {
   const showProcess = session && session.has_audio && !session.has_document
   const showDoc = session && session.has_document
   const readOnly = session?.status === 'confirmed'
+
+  const transcribeStorageKey = `lobanov:transcribeStarted:${sid}`
+  const [transcribeStarted, setTranscribeStarted] = useState(false)
+  useEffect(() => {
+    if (typeof sessionStorage === 'undefined' || !session) return
+    if (session.has_transcript) {
+      sessionStorage.removeItem(transcribeStorageKey)
+      setTranscribeStarted(false)
+      return
+    }
+    setTranscribeStarted(sessionStorage.getItem(transcribeStorageKey) === '1')
+  }, [transcribeStorageKey, session])
+
+  const transcriptPending = Boolean(session?.has_audio && !session?.has_transcript)
+  const transcriptionInProgress = transcriptPending && (transcribe.isPending || transcribeStarted)
 
   const invalidate = () => void qc.invalidateQueries({ queryKey: qk.session(sid) })
 
@@ -109,13 +124,23 @@ export function SessionWorkspacePage() {
             className="bg-muted/20 border-border space-y-4 rounded-xl border p-4"
             aria-live="polite"
           >
-            <TranscriptionProgress session={session} />
+            <TranscriptionProgress session={session} transcriptionInProgress={transcriptionInProgress} />
             {session.has_audio && !session.has_transcript ? (
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  disabled={transcribe.isPending}
-                  onClick={() => void transcribe.mutateAsync({ sessionId: sid, language: 'ru' }).then(invalidate)}
+                  disabled={transcribe.isPending || transcribeStarted}
+                  onClick={async () => {
+                    try {
+                      await transcribe.mutateAsync({ sessionId: sid, language: 'ru' })
+                      setTranscribeStarted(true)
+                      if (typeof sessionStorage !== 'undefined') {
+                        sessionStorage.setItem(transcribeStorageKey, '1')
+                      }
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : 'Transcribe failed')
+                    }
+                  }}
                 >
                   {t('processing.transcribe')}
                 </Button>

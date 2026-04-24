@@ -1,9 +1,12 @@
 import logging
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
+
+if TYPE_CHECKING:
+    from loguru import Record
 
 
 class _InterceptHandler(logging.Handler):
@@ -17,7 +20,7 @@ class _InterceptHandler(logging.Handler):
         logger.bind(name=record.name, loc=loc).opt(exception=record.exc_info).log(level, record.getMessage())
 
 
-def _loguru_loc_patcher(record: dict) -> None:
+def _loguru_loc_patcher(record: "Record") -> None:
     record["extra"].setdefault("loc", f"{record['function']}:{record['line']}")
 
 

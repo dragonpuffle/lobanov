@@ -1,8 +1,11 @@
+from pathlib import Path
 from typing import final
+from uuid import UUID
 
 import dishka
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import lobanov
 from lobanov.adapters.repositories import (
     AudioRecordRepository,
     ClinicalFactRepository,
@@ -66,7 +69,11 @@ from lobanov.usecases.medical_document import (
     UpdateDocumentField,
     ValidateRequiredFields,
 )
+from lobanov.usecases.medical_document.consultation_protocol_pdf import RenderConsultationProtocolPdf
+from lobanov.usecases.medical_document.document_export_types import PdfExportTemplateMap
 from lobanov.usecases.transcript import PreprocessTranscript
+
+_LOBANOV_PACKAGE_ROOT = Path(lobanov.__file__).resolve().parent
 
 
 @final
@@ -390,13 +397,29 @@ class UseCaseProvider(dishka.Provider):
         )
 
     @dishka.provide
-    def provide_save_document_usecase(
+    def provide_pdf_export_template_map(self) -> PdfExportTemplateMap:
+        """template_id (шаблон МД) → jinja-файл PDF; сюда же добавлять новые шаблоны."""
+        consultation = UUID("550e8400-e29b-41d4-a716-446655440010")
+        jinja = _LOBANOV_PACKAGE_ROOT / "templates" / "document_export" / "550e8400-e29b-41d4-a716-446655440010.html.j2"
+        return PdfExportTemplateMap({consultation: jinja})
+
+    @dishka.provide
+    def provide_render_consultation_protocol_pdf(
+        self,
+        template_map: PdfExportTemplateMap,
+    ) -> RenderConsultationProtocolPdf:
+        """юзкейс PDF по карте jinja-шаблонов"""
+        return RenderConsultationProtocolPdf(template_id_to_jinja_file=template_map)
+
+    @dishka.provide
+    def provide_save_document_usecase(  # noqa: PLR0913
         self,
         medical_document_repository: MedicalDocumentRepositoryProtocol[AsyncSession],
         transcript_repository: TranscriptRepositoryProtocol[AsyncSession],
         clinical_fact_repository: ClinicalFactRepositoryProtocol[AsyncSession],
         template_repository: TemplateRepositoryProtocol[AsyncSession],
         file_storage_service: FileStorageProtocol,
+        render_consultation_protocol_pdf: RenderConsultationProtocolPdf,
     ) -> SaveDocument[AsyncSession]:
         """юзкейс сохранения документа"""
         return SaveDocument[AsyncSession](
@@ -405,6 +428,7 @@ class UseCaseProvider(dishka.Provider):
             clinical_fact_repository=clinical_fact_repository,
             template_repository=template_repository,
             file_storage=file_storage_service,
+            render_consultation_protocol_pdf=render_consultation_protocol_pdf,
         )
 
     @dishka.provide

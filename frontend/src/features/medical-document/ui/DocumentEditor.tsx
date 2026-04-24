@@ -105,7 +105,7 @@ export function DocumentEditor({ sessionId, templateId, readOnly }: Props) {
   return (
     <>
       <div className="mb-2 flex items-center justify-end gap-2">
-        <ExportMenu sessionId={sessionId} disabled={readOnly} />
+        <ExportMenu sessionId={sessionId} disabled={doc.status !== 'confirmed'} />
       </div>
       <AnimatePresence mode="wait">
         {isDesktop ? (

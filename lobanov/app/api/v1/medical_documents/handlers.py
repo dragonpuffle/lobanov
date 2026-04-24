@@ -30,9 +30,7 @@ from lobanov.usecases.medical_document import (
     ValidateRequiredFields,
 )
 
-router = APIRouter(
-    prefix="/sessions/{session_id}/document", tags=["medical_documents"], route_class=DishkaRoute
-)
+router = APIRouter(prefix="/sessions/{session_id}/document", tags=["medical_documents"], route_class=DishkaRoute)
 
 
 class MedicalDocumentHandlerError(Exception):
@@ -410,7 +408,7 @@ async def export_document(
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid session ID: {e!s}",
+            detail=str(e),
         ) from e
     except MedicalDocumentNotFoundError as e:
         raise HTTPException(

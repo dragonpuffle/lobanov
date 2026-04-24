@@ -79,9 +79,7 @@ async def create_session(
 async def get_sessions(
     current_user: Annotated[User, Depends(get_current_user)],
     get_user_sessions_use_case: FromDishka[GetUserSessions[AsyncSession]],
-    limit: Annotated[
-        int, Query(ge=1, le=1000, description="Maximum number of sessions to return (1-1000)")
-    ] = 100,
+    limit: Annotated[int, Query(ge=1, le=1000, description="Maximum number of sessions to return (1-1000)")] = 100,
     offset: Annotated[int, Query(ge=0, description="Number of sessions to skip for pagination")] = 0,
     status_filter: Annotated[
         DocumentationSessionStatus | None,

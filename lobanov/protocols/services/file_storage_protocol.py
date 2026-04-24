@@ -48,11 +48,11 @@ class FileStorageProtocol(Protocol):
         """
         ...
 
-    async def save_document(self, content: str, filename: str, session_id: UUID) -> str:
+    async def save_document(self, content: str | bytes, filename: str, session_id: UUID) -> str:
         """Save a document to storage.
 
         Args:
-            content: The document content as a string.
+            content: The document content as text (e.g. JSON) or bytes (e.g. PDF).
             filename: The name to assign to the saved file.
             session_id: The UUID of the documentation session the document belongs to.
 
