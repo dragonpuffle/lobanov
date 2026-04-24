@@ -31,8 +31,12 @@ class StorageConfig(BaseModel):
 
 
 class STTConfig(BaseModel):
-    provider: str = Field(description="Speech-to-text provider (whisper/gigaam)")
-    model: str = Field(description="Speech-to-text model name")
+    provider: str = Field(description="Speech-to-text provider (whisper/gigaam/openrouter)")
+    model: str = Field(description="Speech-to-text model name (OpenRouter model id when provider=openrouter)")
+    api_key: str = Field(
+        default="",
+        description="API key for remote STT (OpenRouter); empty for local whisper/gigaam",
+    )
     device: str = Field(description="Device to run model on (cpu/cuda)")
     language: str = Field(description="Default language for speech recognition (e.g. ru)")
     revision: str = Field(description="Model revision for Hugging Face (GigaAM); use empty string for Whisper")

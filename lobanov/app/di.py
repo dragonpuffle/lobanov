@@ -20,6 +20,7 @@ from lobanov.adapters.services import (
     JWTTokenService,
     LLMClinicalExtractionService,
     LocalFileStorageService,
+    OpenRouterSTTService,
     PasswordManagerService,
     TextPreprocessingService,
     WhisperSTTService,
@@ -157,6 +158,8 @@ class ServiceProvider(dishka.Provider):
         provider = stt_config.provider.lower().strip()
         if provider == "gigaam":
             return GigaAMSTTService(stt_config)
+        if provider == "openrouter":
+            return OpenRouterSTTService(stt_config)
         return WhisperSTTService(stt_config)
 
     @dishka.provide

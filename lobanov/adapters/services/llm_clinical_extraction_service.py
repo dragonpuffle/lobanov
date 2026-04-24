@@ -120,7 +120,7 @@ class LLMClinicalExtractionService(ClinicalExtractionProtocol):
 
         return facts
 
-    async def _llm_extract_facts(  # noqa: C901
+    async def _llm_extract_facts(
         self,
         transcript: str,
         template_fields: list[TemplateField],
@@ -261,7 +261,6 @@ Example shape (keys and `field_name` must match your template):
             if isinstance(values, list):
                 return [str(v) for v in values]
         return []
-
 
     def _extract_value_for_field(self, transcript: str, field: TemplateField) -> str:
         field_name = field.name.lower()
