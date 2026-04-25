@@ -11,7 +11,7 @@ import httpx
 from lobanov.domain.entities.transcript import Transcript, TranscriptLanguage
 from lobanov.infra.configs import STTConfig
 from lobanov.protocols import SpeechRecognitionProtocol
-from lobanov.utils.audio_transcode import AudioTranscodeError, transcode_bytes_to_mp3
+from lobanov.utils.audio_to_mp3 import AudioToMp3Error, convert_bytes_to_mp3
 from lobanov.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -110,8 +110,8 @@ class OpenRouterSTTService(SpeechRecognitionProtocol):
                 audio_format = source_format
             else:
                 try:
-                    raw = await transcode_bytes_to_mp3(raw)
-                except AudioTranscodeError as e:
+                    raw = await convert_bytes_to_mp3(raw)
+                except AudioToMp3Error as e:
                     raise SpeechRecognitionError(str(e)) from e
                 audio_format = "mp3"
             b64_audio = base64.b64encode(raw).decode("ascii")
@@ -148,7 +148,7 @@ class OpenRouterSTTService(SpeechRecognitionProtocol):
                 if response.is_error:
                     body = (response.text or "")[:8000]
                     log_msg = f"OpenRouter STT {response.status_code}: {body}"
-                    logger.error(log_msg)
+                    logger.error("{}", log_msg)  # noqa: PLE1205
                     err_detail = body or response.reason_phrase
                     openrouter_err = f"OpenRouter STT rejected the request ({response.status_code}): {err_detail}"
                     raise SpeechRecognitionError(openrouter_err)

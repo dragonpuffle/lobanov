@@ -34,7 +34,8 @@ async def lifespan(_: FastAPI):
 
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     error_message = f"Unhandled exception: {exc!s}"
-    logger.error(error_message, exc_info=True, extra={"path": request.url.path})  # noqa: LOG014
+    # Use a single "{}" arg so JSON or other "{" in the message is not parsed as Loguru format fields.
+    logger.error("{}", error_message, exc_info=True, extra={"path": request.url.path})  # noqa: LOG014, PLE1205
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={

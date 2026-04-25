@@ -1,51 +1,64 @@
-"""FFmpeg-based audio transcoding (e.g. to MP3 for APIs that only accept wav/mp3)."""
+"""FFmpeg-based transcoding to PCM WAV for OpenAI-compatible ``input_audio`` (OpenRouter STT)."""
 
 import asyncio
 import shutil
+import subprocess
 
 
 class AudioTranscodeError(Exception):
     """Raised when ffmpeg is missing or transcoding fails."""
 
 
-async def transcode_bytes_to_mp3(raw: bytes) -> bytes:
-    """
-    Convert arbitrary input audio bytes to MP3 (via ffmpeg stdin/stdout).
-
-    Requires ``ffmpeg`` on PATH (with libmp3lame). Typical use: OpenRouter/OpenAI
-    ``input_audio`` only allows ``wav`` and ``mp3`` in ``format``; m4a and others
-    must be re-encoded.
-    """
+def _transcode_bytes_to_wav_sync(raw: bytes) -> bytes:
+    """Run ffmpeg via synchronous subprocess (works on Windows with any asyncio loop)."""
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
-        err_msg = (
-            "Audio was transcoded to MP3, but `ffmpeg` was not found on PATH. "
-            "Install ffmpeg, or use WAV/MP3 source files."
-        )
+        err_msg = "ffmpeg was not found on PATH. Install ffmpeg, or reconfigure STT."
         raise AudioTranscodeError(err_msg)
-    proc = await asyncio.create_subprocess_exec(
-        ffmpeg,
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-i",
-        "pipe:0",
-        "-f",
-        "mp3",
-        "-acodec",
-        "libmp3lame",
-        "-q:a",
-        "4",
-        "pipe:1",
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
+    # PCM 16k mono: reliable for OpenAI ``input_audio``; MP3 from disk often rejected as invalid.
+    # apad: very short clips must be padded so the API min duration (~0.1s) is met.
+    proc = subprocess.run(  # noqa: S603
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            "pipe:0",
+            "-af",
+            "apad=whole_dur=0.15",
+            "-f",
+            "wav",
+            "-acodec",
+            "pcm_s16le",
+            "-ar",
+            "16000",
+            "-ac",
+            "1",
+            "pipe:1",
+        ],
+        input=raw,
+        capture_output=True,
+        check=False,
     )
-    out, err = await proc.communicate(input=raw)
     if proc.returncode != 0:
-        detail = (err or b"").decode("utf-8", errors="replace")[:4000]
-        transcode_err = f"ffmpeg could not transcode to MP3 (exit {proc.returncode}): {detail}"
+        detail = (proc.stderr or b"").decode("utf-8", errors="replace")[:4000]
+        transcode_err = f"ffmpeg could not transcode to WAV (exit {proc.returncode}): {detail}"
         raise AudioTranscodeError(transcode_err)
+    out = proc.stdout
     if not out:
-        raise AudioTranscodeError("ffmpeg produced empty MP3 output")
+        raise AudioTranscodeError("ffmpeg produced empty WAV output")
     return out
+
+
+async def transcode_bytes_to_wav(raw: bytes) -> bytes:
+    """
+    Decode input (e.g. MP3, M4A) to 16 kHz mono PCM WAV for ``input_audio``.
+
+    Storage may remain MP3; this path is only for the OpenRouter / OpenAI request body.
+
+    Uses :func:`asyncio.to_thread` with a sync subprocess so transcoding works on
+    Windows under uvicorn, where ``SelectorEventLoop`` does not support
+    :func:`asyncio.create_subprocess_exec` (``NotImplementedError``).
+    """
+    return await asyncio.to_thread(_transcode_bytes_to_wav_sync, raw)

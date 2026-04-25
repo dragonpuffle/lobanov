@@ -55,6 +55,7 @@ def setup_logging(log_level: str = "INFO") -> None:
         compression="zip",
         backtrace=True,
         diagnose=True,
+        enqueue=True,
     )
 
     logger.add(
@@ -66,6 +67,7 @@ def setup_logging(log_level: str = "INFO") -> None:
         compression="zip",
         backtrace=True,
         diagnose=True,
+        enqueue=True,
     )
 
     intercept = _InterceptHandler()

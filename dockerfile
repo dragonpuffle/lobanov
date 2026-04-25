@@ -1,6 +1,6 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS python3
 
-RUN apt update && apt upgrade -y && apt install -y
+RUN apt update && apt upgrade -y && apt install -y ffmpeg
 
 WORKDIR /app
 
