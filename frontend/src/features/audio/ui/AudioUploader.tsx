@@ -41,7 +41,7 @@ export function AudioUploader({ sessionId, onUploaded }: Props) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     maxFiles: 1,
-    accept: { 'audio/*': [] },
+    accept: { 'audio/mpeg': ['.mp3'] },
   })
 
   return (
@@ -56,6 +56,7 @@ export function AudioUploader({ sessionId, onUploaded }: Props) {
         <input {...getInputProps()} />
         <Upload className="text-muted-foreground mx-auto size-10" />
         <p className="mt-2 font-medium">{t('audio.drop')}</p>
+        <p className="text-muted-foreground mt-1 text-xs">{t('audio.mp3Only')}</p>
       </div>
       {file && preview ? (
         <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">

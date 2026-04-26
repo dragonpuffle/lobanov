@@ -20,7 +20,7 @@ export function TranscriptionProgress({ session, transcriptionInProgress = false
     <ol className="max-w-md space-y-3" aria-live="polite">
       <li className="flex items-center gap-2">
         {a ? <Check className="text-field-confirmed size-5" /> : <Circle className="text-muted-foreground size-5" />}
-        <span>Audio</span>
+        <span>{t('processing.audioUpload')}</span>
       </li>
       <li className="flex items-center gap-2">
         {tr ? (

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { FileAudio, FileText, Mic } from 'lucide-react'
+import { Brain, FileAudio, FileText, Mic } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { SessionStatusBadge } from '@/features/sessions/ui/SessionStatusBadge'
@@ -10,6 +10,8 @@ import { api } from '@/shared/api/client'
 import { qk } from '@/shared/api/queryKeys'
 
 type Props = { session: SessionResponse }
+
+const NLP_ACTIVE: Array<SessionResponse['status']> = ['facts_extracted', 'draft_created', 'confirmed']
 
 export function SessionCard({ session }: Props) {
   const { t } = useTranslation()
@@ -34,12 +36,15 @@ export function SessionCard({ session }: Props) {
             {new Date(session.created_at).toLocaleString()} · {session.id.slice(0, 8)}…
           </p>
         </CardHeader>
-        <CardContent className="text-muted-foreground flex gap-3 text-xs">
+        <CardContent className="text-muted-foreground flex flex-wrap gap-3 text-xs">
           <span className={cn('flex items-center gap-1', session.status !== 'created' && 'text-primary')}>
             <FileAudio className="size-3.5" /> audio
           </span>
           <span className={cn('flex items-center gap-1', ['transcribed', 'facts_extracted', 'draft_created', 'confirmed'].includes(session.status) && 'text-primary')}>
             <Mic className="size-3.5" /> stt
+          </span>
+          <span className={cn('flex items-center gap-1', NLP_ACTIVE.includes(session.status) && 'text-primary')}>
+            <Brain className="size-3.5" /> nlp
           </span>
           <span className={cn('flex items-center gap-1', ['draft_created', 'confirmed'].includes(session.status) && 'text-primary')}>
             <FileText className="size-3.5" /> doc

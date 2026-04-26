@@ -11,7 +11,7 @@ type Props = { onRecorded: (file: File) => void }
 
 export function AudioRecorder({ onRecorded }: Props) {
   const { t } = useTranslation()
-  const { start, stop, recording, error } = useMediaRecorder()
+  const { start, stop, recording, encoding, error } = useMediaRecorder()
   const [url, setUrl] = useState<string | null>(null)
   const [ticker, setTicker] = useState(0)
   const tref = useRef<number | null>(null)
@@ -42,6 +42,7 @@ export function AudioRecorder({ onRecorded }: Props) {
             size="lg"
             variant={recording ? 'destructive' : 'default'}
             className="size-20 rounded-full"
+            disabled={encoding}
             onClick={async () => {
               if (recording) {
                 const f = await stop()
@@ -68,7 +69,9 @@ export function AudioRecorder({ onRecorded }: Props) {
               .padStart(2, '0')}
             :{(ticker % 60).toString().padStart(2, '0')}
           </p>
-          <p className="text-muted-foreground text-sm">{recording ? t('audio.recording') : t('audio.record')}</p>
+          <p className="text-muted-foreground text-sm">
+            {encoding ? t('audio.encoding') : recording ? t('audio.recording') : t('audio.record')}
+          </p>
         </div>
       </div>
       {url ? <WaveformPlayer url={url} /> : null}

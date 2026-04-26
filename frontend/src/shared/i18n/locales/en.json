@@ -36,10 +36,21 @@
     "record": "Record",
     "recording": "Recording",
     "stop": "Stop",
+    "encoding": "Encoding MP3…",
+    "mp3Only": "Only MP3 format is supported for now",
     "fileTooLarge": "File is too large (max 100 MB)",
-    "invalidFormat": "Unsupported format. Use MP3, WAV, M4A, OGG, WebM, or FLAC"
+    "invalidFormat": "Unsupported format. Only MP3 is supported for now"
+  },
+  "sessionStatus": {
+    "created": "Created",
+    "audio_uploaded": "Audio loaded",
+    "transcribed": "Transcribed",
+    "facts_extracted": "Facts extracted",
+    "draft_created": "Draft ready",
+    "confirmed": "Confirmed"
   },
   "processing": {
+    "audioUpload": "Audio upload…",
     "transcribe": "Start transcription",
     "transcribing": "Transcribing…",
     "generate": "Generate document",

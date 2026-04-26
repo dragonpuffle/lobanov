@@ -36,10 +36,21 @@
     "record": "Запись",
     "recording": "Идёт запись",
     "stop": "Стоп",
+    "encoding": "Кодирование MP3…",
+    "mp3Only": "Пока поддерживается только формат MP3",
     "fileTooLarge": "Файл слишком большой (макс. 100 МБ)",
-    "invalidFormat": "Неподдерживаемый формат. Используйте MP3, WAV, M4A, OGG, WebM или FLAC"
+    "invalidFormat": "Неподдерживаемый формат. Сейчас поддерживается только MP3"
+  },
+  "sessionStatus": {
+    "created": "Создана",
+    "audio_uploaded": "Аудио загружено",
+    "transcribed": "Транскрибировано",
+    "facts_extracted": "Факты извлечены",
+    "draft_created": "Черновик готов",
+    "confirmed": "Подтверждена"
   },
   "processing": {
+    "audioUpload": "Загрузка аудио…",
     "transcribe": "Запустить транскрипцию",
     "transcribing": "Транскрипция…",
     "generate": "Сформировать документ",

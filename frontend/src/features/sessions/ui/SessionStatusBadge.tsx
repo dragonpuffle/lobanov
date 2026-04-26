@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useTranslation } from 'react-i18next'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import type { DocumentationSessionStatus } from '@/shared/api/types'
@@ -17,22 +18,14 @@ const s = cva('inline-flex items-center rounded-md border px-2 py-0.5 text-xs fo
   defaultVariants: { status: 'created' },
 })
 
-const labels: Record<DocumentationSessionStatus, string> = {
-  created: 'CREATED',
-  audio_uploaded: 'AUDIO',
-  transcribed: 'TRANS',
-  facts_extracted: 'FACTS',
-  draft_created: 'DRAFT',
-  confirmed: 'DONE',
-}
-
 export function SessionStatusBadge({
   status,
   className,
 }: { status: DocumentationSessionStatus } & React.ComponentProps<'span'>) {
+  const { t } = useTranslation()
   return (
     <span className={cn(s({ status: status as VariantProps<typeof s>['status'] }), className)} title={status}>
-      {labels[status] ?? status}
+      {t(`sessionStatus.${status}`, { defaultValue: status })}
     </span>
   )
 }
