@@ -1,0 +1,2 @@
+from . import extract_clinical_facts as extract_clinical_facts
+from .extract_clinical_facts import ExtractClinicalFacts as ExtractClinicalFacts

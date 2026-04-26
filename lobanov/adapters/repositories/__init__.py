@@ -1,0 +1,7 @@
+from .audio_record_repository import AudioRecordRepository as AudioRecordRepository
+from .clinical_fact_repository import ClinicalFactRepository as ClinicalFactRepository
+from .documentation_session_repository import DocumentationSessionRepository as DocumentationSessionRepository
+from .medical_document_repository import MedicalDocumentRepository as MedicalDocumentRepository
+from .template_repository import TemplateRepository as TemplateRepository
+from .transcript_repository import TranscriptRepository as TranscriptRepository
+from .user_repository import UserRepository as UserRepository

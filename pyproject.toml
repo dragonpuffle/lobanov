@@ -1,0 +1,104 @@
+[project]
+name = "lobanov"
+dynamic = ["version"]
+description = "Medical Documentation Assistant Backend"
+requires-python = ">=3.12,<3.13"
+authors = [
+    { name = "Andrew Podvigin", email = "podviginandrej@gmail.com" },
+]
+dependencies = [
+    "aiofiles>=25.1.0",
+    "alembic[tz]>=1.18.4",
+    "asyncpg>=0.31.0",
+    "dishka>=1.10.0",
+    "jinja2>=3.1.6",
+    "fastapi>=0.136.0",
+    "faster-whisper>=1.2.1",
+    "loguru>=0.7.3",
+    "bcrypt>=4.0.1",
+    "psycopg2-binary>=2.9.11",
+    "pydantic-settings>=2.13.1",
+    "pydantic[email]>=2.13.2",
+    "python-dotenv>=1.2.2",
+    "python-jose[cryptography]>=3.5.0",
+    "python-multipart>=0.0.26",
+    "sqlalchemy[asyncio]>=2.0.49",
+    "structlog>=25.5.0",
+    "uvicorn[standard]>=0.44.0",
+    "fpdf2>=2.8.7",
+    "httpx>=0.28.0",
+    "transformers>=5.6.2",
+]
+
+[dependency-groups]
+dev = [
+    "hatch>=1.16.5",
+    "mypy>=1.20.1",
+    "ruff>=0.15.11",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+skip-excluded-dirs = true
+
+[tool.hatch.build.targets.wheel]
+only-packages = true
+packages = ["lobanov"]
+
+[tool.hatch.version]
+path = "lobanov/__version__.py"
+
+[tool.uv]
+package = true
+
+[tool.mypy]
+plugins = "pydantic.mypy"
+
+[tool.ruff]
+exclude = [".venv"]
+line-length = 120
+indent-width = 4
+target-version = "py312"
+fix = true
+
+[tool.ruff.format]
+preview = true
+
+[tool.ruff.lint]
+select = ["ALL"]
+fixable = ["ALL"]
+ignore = ["ANN", "D", "EM101", "RUF001", "BLE001", "SIM103", "ASYNC109", "TRY003", "PLW0602", "TC001", "ISC003", "COM812", "RUF003", "RUF002", "TRY301"]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402", "F401", "TID252", "PLC0414"]
+"**/{tests,docs,tools}/*" = ["E402"]
+"tests/**/*" = ["S101"]
+"*_test.py" = ["ANN", "S", "S101", "TRY", "PGH003", "FBT", "PT012", "N801", "ARG002", "SLF001", "PLR", "SIM"]
+"scripts/*" = ["T201", "ASYNC", "A004", "A001", "TRY003", "SLF001"]
+"alembic/*" = ["INP001"]
+
+[tool.ruff.lint.flake8-bandit]
+check-typed-exception = true
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 128
+
+[tool.ruff.lint.isort]
+case-sensitive = true
+force-single-line = false
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = []
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "pydantic_settings.BaseSettings",
+]

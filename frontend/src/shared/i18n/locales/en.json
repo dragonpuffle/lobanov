@@ -1,0 +1,85 @@
+{
+  "app": { "name": "Medical Docs Assistant" },
+  "auth": {
+    "login": "Log in",
+    "register": "Create account",
+    "email": "Email",
+    "password": "Password",
+    "fullName": "Full name",
+    "loginFailed": "Login failed",
+    "registerFailed": "Registration failed",
+    "noToken": "No access token in response. Please use Log in after registration.",
+    "registeredLogin": "Account created. Please log in.",
+    "welcome": "Welcome, {{name}}!",
+    "weakPassword": "Use at least 8 characters with upper, lower, digit, special"
+  },
+  "nav": { "sessions": "Sessions", "settings": "Settings", "logout": "Log out" },
+  "sessions": {
+    "title": "Documentation sessions",
+    "new": "New session",
+    "empty": "No sessions yet. Create a session to upload audio and generate a document.",
+    "search": "Search by template or ID",
+    "filterStatus": "Status",
+    "allStatuses": "All"
+  },
+  "session": {
+    "back": "Back to sessions",
+    "template": "Template",
+    "stepAudio": "Audio",
+    "stepProcess": "Processing",
+    "stepDoc": "Document",
+    "stepDone": "Done"
+  },
+  "audio": {
+    "drop": "Drop audio or click to browse",
+    "upload": "Upload",
+    "record": "Record",
+    "recording": "Recording",
+    "stop": "Stop",
+    "encoding": "Encoding MP3…",
+    "mp3Only": "Only MP3 format is supported for now",
+    "fileTooLarge": "File is too large (max 100 MB)",
+    "invalidFormat": "Unsupported format. Only MP3 is supported for now"
+  },
+  "sessionStatus": {
+    "created": "Created",
+    "audio_uploaded": "Audio loaded",
+    "transcribed": "Transcribed",
+    "facts_extracted": "Facts extracted",
+    "draft_created": "Draft ready",
+    "confirmed": "Confirmed"
+  },
+  "processing": {
+    "audioUpload": "Audio upload…",
+    "transcribe": "Start transcription",
+    "transcribing": "Transcribing…",
+    "generate": "Generate document",
+    "extractingFacts": "Extracting clinical facts…",
+    "factsExtracted": "Clinical facts extracted"
+  },
+  "document": {
+    "transcript": "Transcript",
+    "fields": "Fields",
+    "validate": "Validation",
+    "source": "Source in transcript",
+    "showInTranscript": "Show in transcript",
+    "confirm": "Confirm document",
+    "export": "Export",
+    "readOnly": "This document is confirmed and read-only."
+  },
+  "fieldStatus": {
+    "auto_filled": "Auto",
+    "user_edited": "Edited",
+    "missing": "Missing",
+    "doubtful": "Doubtful",
+    "confirmed": "Confirmed"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "language": "Language"
+  }
+}

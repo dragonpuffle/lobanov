@@ -1,0 +1,12 @@
+from . import clinical_extraction_protocol as clinical_extraction_protocol
+from . import file_storage_protocol as file_storage_protocol
+from . import jwt_token_protocol as jwt_token_protocol
+from . import password_manager_protocol as password_manager_protocol
+from . import speech_recognition_protocol as speech_recognition_protocol
+from . import text_processing_protocol as text_processing_protocol
+from .clinical_extraction_protocol import ClinicalExtractionProtocol
+from .file_storage_protocol import FileStorageProtocol
+from .jwt_token_protocol import JWTTokenProtocol
+from .password_manager_protocol import PasswordManagerProtocol
+from .speech_recognition_protocol import SpeechRecognitionProtocol
+from .text_processing_protocol import TextProcessingProtocol

@@ -1,0 +1,24 @@
+{# medical_document_template_id: 550e8400-e29b-41d4-a716-446655440010 — Протокол консультации (alembic a1b2c3d4e5f6). HTML для fpdf2 write_html. #}
+<h1>Протокол консультации</h1>
+<p><b>Дата документа:</b> {{ document_date }}</p>
+<p>Шаблон {{ template_id }} · документ {{ document_id }}</p>
+<h2>1. Данные пациента</h2>
+<p><b>ФИО пациента</b><br />{{ patient_name }}</p>
+<p><b>Дата рождения</b><br />{{ birth_date }}</p>
+<p><b>Пол</b><br />{{ gender }}</p>
+<h2>2. Визит</h2>
+<p><b>Дата визита</b><br />{{ visit_date }}</p>
+<h2>3. Жалобы пациента</h2>
+<p><b>Основная жалоба</b><br />{{ chief_complaint }}</p>
+<h2>4. Анамнез заболевания</h2>
+<p><b>Анамнез заболевания</b><br />{{ medical_history }}</p>
+<h2>5. Аллергии</h2>
+<p><b>Аллергии</b><br />{{ allergies }}</p>
+<h2>6. Данные осмотра</h2>
+<p><b>Данные осмотра</b><br />{{ examination }}</p>
+<h2>7. Диагноз</h2>
+<p><b>Диагноз</b><br />{{ diagnosis }}</p>
+<h2>8. План лечения</h2>
+<p><b>План лечения</b><br />{{ treatment_plan }}</p>
+<h2>9. Врач</h2>
+<p><b>ФИО врача</b><br />{{ doctor_name }}</p>

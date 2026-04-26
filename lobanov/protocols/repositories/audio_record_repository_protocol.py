@@ -1,0 +1,88 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Protocol
+from uuid import UUID
+
+from lobanov.domain.entities.audio_record import AudioRecord
+
+
+class AudioRecordRepositoryProtocol[SessionT](Protocol):
+    @asynccontextmanager
+    async def context(self) -> AsyncGenerator[SessionT]:
+        raise NotImplementedError("AudioRecordRepositoryProtocol.context")
+        yield  # pyright: ignore[reportUnreachable]
+
+    async def create(self, session: SessionT, audio_record: AudioRecord) -> AudioRecord:
+        """Create a new audio record in the repository.
+
+        Args:
+            session: The database session.
+            audio_record: The AudioRecord entity to create.
+
+        Returns:
+            The created AudioRecord entity with assigned ID.
+
+        Raises:
+            RepositoryError: If the audio record cannot be created due to database errors.
+        """
+        ...
+
+    async def get_by_id(self, session: SessionT, audio_record_id: UUID) -> AudioRecord | None:
+        """Retrieve an audio record by its unique identifier.
+
+        Args:
+            session: The database session.
+            audio_record_id: The UUID of the audio record to retrieve.
+
+        Returns:
+            The AudioRecord entity if found, None otherwise.
+
+        Raises:
+            RepositoryError: If there is a database error during retrieval.
+        """
+        ...
+
+    async def get_by_session_id(self, session: SessionT, session_id: UUID) -> AudioRecord | None:
+        """Retrieve an audio record associated with a specific documentation session.
+
+        Args:
+            session: The database session.
+            session_id: The UUID of the documentation session.
+
+        Returns:
+            The AudioRecord entity if found, None otherwise.
+
+        Raises:
+            RepositoryError: If there is a database error during retrieval.
+        """
+        ...
+
+    async def delete(self, session: SessionT, audio_record_id: UUID) -> bool:
+        """Delete an audio record by its unique identifier.
+
+        Args:
+            session: The database session.
+            audio_record_id: The UUID of the audio record to delete.
+
+        Returns:
+            True if the audio record was successfully deleted, False otherwise.
+
+        Raises:
+            RepositoryError: If there is a database error during deletion.
+        """
+        ...
+
+    async def get_file_path(self, session: SessionT, audio_record_id: UUID) -> str | None:
+        """Retrieve the file path of an audio record.
+
+        Args:
+            session: The database session.
+            audio_record_id: The UUID of the audio record.
+
+        Returns:
+            The file path as a string if found, None otherwise.
+
+        Raises:
+            RepositoryError: If there is a database error during retrieval.
+        """
+        ...
