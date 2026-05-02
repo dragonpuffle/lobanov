@@ -31,11 +31,13 @@ class StorageConfig(BaseModel):
 
 
 class STTConfig(BaseModel):
-    provider: str = Field(description="Speech-to-text provider (whisper/gigaam/openrouter)")
-    model: str = Field(description="Speech-to-text model name (OpenRouter model id when provider=openrouter)")
+    provider: str = Field(
+        description="Speech-to-text provider (transformers/gigaam/openrouter_audio/openrouter_audio_stt)"
+    )
+    model: str = Field(description="Speech-to-text model name or OpenRouter model id")
     api_key: str = Field(
         default="",
-        description="API key for remote STT (OpenRouter); empty for local whisper/gigaam",
+        description="API key for remote OpenRouter services; empty for local whisper/gigaam",
     )
     device: str = Field(description="Device to run model on (cpu/cuda)")
     language: str = Field(description="Default language for speech recognition (e.g. ru)")
@@ -51,6 +53,10 @@ class STTConfig(BaseModel):
     )
     condition_on_previous_text: bool = Field(description="Condition segments on previous text")
     initial_prompt: str = Field(description="Initial prompt for domain adaptation; empty string to disable")
+    model_cache_dir: str = Field(
+        default="models/stt",
+        description="Directory for downloaded local STT models",
+    )
 
 
 class NLPConfig(BaseModel):

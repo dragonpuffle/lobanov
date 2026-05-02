@@ -20,10 +20,11 @@ from lobanov.adapters.services import (
     JWTTokenService,
     LLMClinicalExtractionService,
     LocalFileStorageService,
-    OpenRouterSTTService,
+    OpenRouterAudioSTTService,
+    OpenRouterAudioService,
     PasswordManagerService,
     TextPreprocessingService,
-    WhisperSTTService,
+    TransformersSTTService,
 )
 from lobanov.infra.config import GlobalConfig
 from lobanov.infra.configs import (
@@ -154,13 +155,15 @@ class ServiceProvider(dishka.Provider):
 
     @dishka.provide
     def provide_speech_recognition_service(self, stt_config: STTConfig) -> SpeechRecognitionProtocol:
-        """сервис распознавания речи на основе Whisper"""
+        """сервис распознавания речи"""
         provider = stt_config.provider.lower().strip()
         if provider == "gigaam":
             return GigaAMSTTService(stt_config)
-        if provider == "openrouter":
-            return OpenRouterSTTService(stt_config)
-        return WhisperSTTService(stt_config)
+        if provider in {"openrouter_audio"}:  # noqa: FURB171
+            return OpenRouterAudioService(stt_config)
+        if provider in {"openrouter_audio_stt", "openrouter_stt"}:
+            return OpenRouterAudioSTTService(stt_config)
+        return TransformersSTTService(stt_config)
 
     @dishka.provide
     def provide_text_preprocessing_service(self, text_cfg: TextPreprocessingConfig) -> TextProcessingProtocol:
