@@ -1,6 +1,5 @@
 import asyncio
 import contextlib
-import re
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
@@ -9,9 +8,13 @@ from uuid import uuid4
 
 import aiofiles.os
 import torch
-from huggingface_hub import snapshot_download
 from transformers import AutoModel
 
+from lobanov.adapters.services.hf_stt_utils import (
+    ensure_hf_snapshot,
+    get_hf_model_dir_with_revision,
+    has_hf_snapshot_weights,
+)
 from lobanov.domain.entities.transcript import Transcript, TranscriptLanguage
 from lobanov.infra.configs import STTConfig
 from lobanov.protocols import SpeechRecognitionProtocol
@@ -22,14 +25,6 @@ logger = get_logger(__name__)
 
 class SpeechRecognitionError(Exception):
     pass
-
-
-def _revision_cache_dirname(revision: str | None) -> str:
-    """Subdirectory under the model id for this Hub revision (branch/tag/commit)."""
-    raw = (revision or "").strip()
-    label = raw or "default"
-    safe = re.sub(r'[<>:"/\\|?*]', "_", label)
-    return safe or "default"
 
 
 @torch.compiler.disable
@@ -66,29 +61,9 @@ class GigaAMSTTService(SpeechRecognitionProtocol):
         self._model: Any = None
         self._model_lock = asyncio.Lock()
 
-    @property
-    def _cache_root(self) -> Path:
-        return Path(self._stt.model_cache_dir).expanduser().resolve()
-
-    @property
-    def _model_dir(self) -> Path:
-        safe_model_id = self._stt.model.replace("/", "--")
-        return self._cache_root / safe_model_id / _revision_cache_dirname(self._revision)
-
-    def _local_snapshot_has_weights(self, model_dir: Path) -> bool:
-        if not (model_dir / "config.json").is_file():
-            return False
-        return bool(
-            (model_dir / "model.safetensors").is_file()
-            or (model_dir / "pytorch_model.bin").is_file()
-            or (model_dir / "model.safetensors.index.json").is_file()
-            or any(model_dir.glob("*.safetensors"))
-        )
-
-    def _ensure_local_snapshot(self, model_dir: Path) -> None:
-        if self._local_snapshot_has_weights(model_dir):
+    def _maybe_log_download_start(self, model_dir: Path) -> None:
+        if has_hf_snapshot_weights(model_dir):
             return
-        model_dir.mkdir(parents=True, exist_ok=True)
         rev_label = self._revision if self._revision is not None else "default"
         logger.info(
             "Downloading GigaAM snapshot {model!r} revision {rev!r} into {path}",
@@ -96,18 +71,15 @@ class GigaAMSTTService(SpeechRecognitionProtocol):
             rev=rev_label,
             path=str(model_dir),
         )
-        snapshot_download(
-            repo_id=self._stt.model,
-            revision=self._revision,
-            local_dir=str(model_dir),
-        )
 
     def _load_model_sync(self) -> Any:
-        model_dir = self._model_dir
-        self._ensure_local_snapshot(model_dir)
-        logger.info("Loading GigaAM from {path}", path=str(model_dir))
+        model_dir = get_hf_model_dir_with_revision(self._stt)
+        self._maybe_log_download_start(model_dir)
+        local_dir_path = ensure_hf_snapshot(self._stt)
+        local_dir_str = str(local_dir_path)
+        logger.info("Loading GigaAM from {path}", path=local_dir_str)
         with _cpu_default_device_guard():
-            model = _gigaam_from_pretrained(str(model_dir))
+            model = _gigaam_from_pretrained(local_dir_str)
         if hasattr(model, "to"):
             model = model.to(self._stt.device)
         return model
@@ -148,7 +120,6 @@ class GigaAMSTTService(SpeechRecognitionProtocol):
             raise SpeechRecognitionError(err_msg) from e
 
     def _run_inference(self, file_path: str) -> str:
-        # GigaAM API differs by revision, so we probe common method names.
         model = self._model
         for method_name in ("transcribe", "transcribe_file", "asr"):
             method = getattr(model, method_name, None)

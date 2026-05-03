@@ -1,3 +1,4 @@
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import final
 from uuid import UUID
@@ -17,14 +18,19 @@ from lobanov.adapters.repositories import (
 )
 from lobanov.adapters.services import (
     GigaAMSTTService,
+    GraniteSpeechSTTService,
     JWTTokenService,
     LLMClinicalExtractionService,
     LocalFileStorageService,
     OpenRouterAudioSTTService,
     OpenRouterAudioService,
     PasswordManagerService,
+    RussianWhisperHFSTTService,
     TextPreprocessingService,
     TransformersSTTService,
+    VibeVoiceASRSTTService,
+    WhisperHFSTTService,
+    WhisperHFV2STTService,
 )
 from lobanov.infra.config import GlobalConfig
 from lobanov.infra.configs import (
@@ -78,6 +84,27 @@ from lobanov.usecases.medical_document.document_export_types import PdfExportTem
 from lobanov.usecases.transcript import PreprocessTranscript
 
 _LOBANOV_PACKAGE_ROOT = Path(lobanov.__file__).resolve().parent
+
+_STT_FACTORIES: Sequence[
+    tuple[tuple[str, ...], Callable[[STTConfig], SpeechRecognitionProtocol]],
+] = (
+    (("gigaam",), GigaAMSTTService),
+    (("whisper_hf_v2", "whisper_hf_v2_simple"), WhisperHFV2STTService),
+    (("whisper_hf", "openai_whisper_hf"), WhisperHFSTTService),
+    (("russian_whisper_hf", "whisper_ru_hf"), RussianWhisperHFSTTService),
+    (("granite_speech", "granite_speech_hf"), GraniteSpeechSTTService),
+    (("vibevoice_asr", "vibevoice_asr_hf"), VibeVoiceASRSTTService),
+    (("openrouter_audio",), OpenRouterAudioService),
+    (("openrouter_audio_stt", "openrouter_stt"), OpenRouterAudioSTTService),
+)
+
+
+def _speech_recognition_from_config(stt_config: STTConfig) -> SpeechRecognitionProtocol:
+    provider = stt_config.provider.lower().strip()
+    for names, ctor in _STT_FACTORIES:
+        if provider in names:
+            return ctor(stt_config)
+    return TransformersSTTService(stt_config)
 
 
 @final
@@ -156,14 +183,7 @@ class ServiceProvider(dishka.Provider):
     @dishka.provide
     def provide_speech_recognition_service(self, stt_config: STTConfig) -> SpeechRecognitionProtocol:
         """сервис распознавания речи"""
-        provider = stt_config.provider.lower().strip()
-        if provider == "gigaam":
-            return GigaAMSTTService(stt_config)
-        if provider in {"openrouter_audio"}:  # noqa: FURB171
-            return OpenRouterAudioService(stt_config)
-        if provider in {"openrouter_audio_stt", "openrouter_stt"}:
-            return OpenRouterAudioSTTService(stt_config)
-        return TransformersSTTService(stt_config)
+        return _speech_recognition_from_config(stt_config)
 
     @dishka.provide
     def provide_text_preprocessing_service(self, text_cfg: TextPreprocessingConfig) -> TextProcessingProtocol:

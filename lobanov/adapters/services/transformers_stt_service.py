@@ -6,37 +6,15 @@ from uuid import uuid4
 
 import aiofiles.os
 import torch
-import transformers.utils.import_utils as _transformers_import_utils
+from transformers import AutoModelForCTC, AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
+import lobanov.adapters.services.hf_stt_utils as _hf_stt_utils_side_effects  # noqa: F401
 from lobanov.domain.entities.transcript import Transcript, TranscriptLanguage
 from lobanov.infra.configs import STTConfig
 from lobanov.protocols import SpeechRecognitionProtocol
 from lobanov.utils.logging import get_logger
 
 logger = get_logger(__name__)
-
-
-def _sync_transformers_torchcodec_flag_with_importability() -> None:
-    """``pyannote-audio`` installs ``torchcodec``; ``transformers`` only checks that the dist is present, then
-    ``import torchcodec`` runs during ASR preprocessing and can fail on Windows (native DLL / FFmpeg shared).
-    If import does not work, report torchcodec as unavailable so the pipeline falls back to ``ffmpeg_read``."""
-    try:
-        import torchcodec  # noqa: F401, PLC0415
-    except Exception:
-
-        def _no_torchcodec() -> bool:
-            return False
-
-        _transformers_import_utils.is_torchcodec_available = _no_torchcodec  # type: ignore[method-assign, assignment]
-        import transformers.utils as _transformers_utils  # noqa: PLC0415
-
-        _transformers_utils.is_torchcodec_available = _no_torchcodec  # type: ignore[method-assign, assignment]
-
-
-_sync_transformers_torchcodec_flag_with_importability()
-
-
-from transformers import AutoModelForCTC, AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline  # noqa: E402
 
 
 class SpeechRecognitionError(Exception):

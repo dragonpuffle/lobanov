@@ -32,7 +32,12 @@ class StorageConfig(BaseModel):
 
 class STTConfig(BaseModel):
     provider: str = Field(
-        description="Speech-to-text provider (transformers/gigaam/openrouter_audio/openrouter_audio_stt)"
+        description=(
+            "Speech-to-text provider "
+            "(transformers/gigaam/whisper_hf_v2/whisper_hf/openai_whisper_hf/russian_whisper_hf/"
+            "granite_speech/vibevoice_asr/vibevoice_asr_hf/"
+            "openrouter_audio/openrouter_audio_stt/openrouter_stt)"
+        ),
     )
     model: str = Field(description="Speech-to-text model name or OpenRouter model id")
     api_key: str = Field(
