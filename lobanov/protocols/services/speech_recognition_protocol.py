@@ -3,6 +3,10 @@ from typing import Protocol
 from lobanov.domain.entities.transcript import Transcript
 
 
+class SpeechRecognitionError(Exception):
+    """Raised when speech recognition fails (local STT models, OpenRouter, etc.)."""
+
+
 class SpeechRecognitionProtocol(Protocol):
     async def transcribe_audio(self, file_path: str, language: str) -> Transcript:
         """Transcribe an audio file to text using speech recognition.

@@ -27,10 +27,8 @@ from lobanov.adapters.services import (
     PasswordManagerService,
     RussianWhisperHFSTTService,
     TextPreprocessingService,
-    TransformersSTTService,
-    VibeVoiceASRSTTService,
+    VibeVoiceHFSTTService,
     WhisperHFSTTService,
-    WhisperHFV2STTService,
 )
 from lobanov.infra.config import GlobalConfig
 from lobanov.infra.configs import (
@@ -85,15 +83,12 @@ from lobanov.usecases.transcript import PreprocessTranscript
 
 _LOBANOV_PACKAGE_ROOT = Path(lobanov.__file__).resolve().parent
 
-_STT_FACTORIES: Sequence[
-    tuple[tuple[str, ...], Callable[[STTConfig], SpeechRecognitionProtocol]],
-] = (
-    (("gigaam",), GigaAMSTTService),
-    (("whisper_hf_v2", "whisper_hf_v2_simple"), WhisperHFV2STTService),
+_STT_FACTORIES: Sequence[tuple[tuple[str, ...], Callable[[STTConfig], SpeechRecognitionProtocol]]] = (
     (("whisper_hf", "openai_whisper_hf"), WhisperHFSTTService),
-    (("russian_whisper_hf", "whisper_ru_hf"), RussianWhisperHFSTTService),
-    (("granite_speech", "granite_speech_hf"), GraniteSpeechSTTService),
-    (("vibevoice_asr", "vibevoice_asr_hf"), VibeVoiceASRSTTService),
+    (("russian_whisper_hf", "russian_whisper"), RussianWhisperHFSTTService),
+    (("granite_speech_hf", "granite_speech"), GraniteSpeechSTTService),
+    (("gigaam_hf", "gigaam"), GigaAMSTTService),
+    (("vibevoice_hf", "vibevoice"), VibeVoiceHFSTTService),
     (("openrouter_audio",), OpenRouterAudioService),
     (("openrouter_audio_stt", "openrouter_stt"), OpenRouterAudioSTTService),
 )
@@ -104,7 +99,8 @@ def _speech_recognition_from_config(stt_config: STTConfig) -> SpeechRecognitionP
     for names, ctor in _STT_FACTORIES:
         if provider in names:
             return ctor(stt_config)
-    return TransformersSTTService(stt_config)
+    msg = f"Unknown stt provider: {provider!r}"
+    raise ValueError(msg)
 
 
 @final

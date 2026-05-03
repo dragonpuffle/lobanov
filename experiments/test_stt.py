@@ -1,3 +1,5 @@
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import asyncio
@@ -8,23 +10,24 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from lobanov.compat.transformers_asr_no_torchcodec import disable_torchcodec_probe_for_asr
+
+disable_torchcodec_probe_for_asr()
+
 from lobanov.adapters.services.gigaam_stt_service import GigaAMSTTService
 from lobanov.adapters.services.granite_speech_stt_service import GraniteSpeechSTTService
 from lobanov.adapters.services.openrouter_audio_service import OpenRouterAudioService
 from lobanov.adapters.services.openrouter_audio_stt_service import OpenRouterAudioSTTService
 from lobanov.adapters.services.russian_whisper_hf_stt_service import RussianWhisperHFSTTService
-from lobanov.adapters.services.transformers_stt_service import TransformersSTTService
-from lobanov.adapters.services.vibevoice_asr_stt_service import VibeVoiceASRSTTService
+from lobanov.adapters.services.vibevoice_asr_stt_service import VibeVoiceHFSTTService
 from lobanov.adapters.services.whisper_hf_stt_service import WhisperHFSTTService
-from lobanov.adapters.services.whisper_hf_v2_stt_service import WhisperHFV2STTService
 from lobanov.infra.configs import STTConfig
 from lobanov.protocols import SpeechRecognitionProtocol
 
 load_dotenv()
-# backends: openrouter_* | transformers | gigaam | whisper_large_v3 | whisper_large_v3_turbo
-# russian_whisper_turbo | whisper_large_v3_turbo_v2 | whisper_large_v3_v2 | granite_speech
-# gigaam_e2e_rnnt | vibevoice_asr_hf
-BACKEND = "whisper_large_v3_turbo_v2"
+# Supported: whisper_hf, russian_whisper_hf, granite_speech_hf, gigaam_hf, vibevoice_hf,
+# openrouter_audio, openrouter_audio_stt
+BACKEND = "whisper_hf"
 
 AUDIO_1 = Path(r"C:\Users\dragonpuffle\Documents\диплом\audio\Сценарий 0 цефалгия.mp3")
 AUDIO_2 = Path(r"C:\Users\dragonpuffle\Documents\диплом\audio\Сценарий 1 орви.mp3")
@@ -32,7 +35,7 @@ AUDIO_2 = Path(r"C:\Users\dragonpuffle\Documents\диплом\audio\Сценар
 LANG = "ru"
 
 
-def build_stt_config() -> STTConfig:  # noqa: PLR0911, C901
+def build_stt_config() -> STTConfig:  # noqa: PLR0911
     common = {
         "language": LANG,
         "beam_size": 5,
@@ -68,31 +71,8 @@ def build_stt_config() -> STTConfig:  # noqa: PLR0911, C901
             **common,
         )
 
-    if BACKEND == "transformers":
-        return STTConfig(
-            provider="transformers",
-            model="ibm-granite/granite-speech-4.1-2b",
-            api_key="",
-            device="cuda",
-            revision="",
-            compute_type="float16",
-            model_cache_dir=cache,
-            **common,
-        )
-
-    if BACKEND == "whisper_large_v3":
-        return STTConfig(
-            provider="whisper_hf",
-            model="openai/whisper-large-v3",
-            api_key="",
-            device="cuda",
-            revision="",
-            compute_type="float16",
-            model_cache_dir=cache,
-            **common,
-        )
-
-    if BACKEND == "whisper_large_v3_turbo":
+    # OpenAI Whisper large v3 family (HF card uses torch_dtype + pipeline ASR recipe).
+    if BACKEND == "whisper_hf":
         return STTConfig(
             provider="whisper_hf",
             model="openai/whisper-large-v3-turbo",
@@ -104,31 +84,8 @@ def build_stt_config() -> STTConfig:  # noqa: PLR0911, C901
             **common,
         )
 
-    if BACKEND == "whisper_large_v3_turbo_v2":
-        return STTConfig(
-            provider="whisper_hf_v2",
-            model="openai/whisper-large-v3-turbo",
-            api_key="",
-            device="cuda",
-            revision="",
-            compute_type="float16",
-            model_cache_dir=cache,
-            **common,
-        )
-
-    if BACKEND == "whisper_large_v3_v2":
-        return STTConfig(
-            provider="whisper_hf_v2",
-            model="openai/whisper-large-v3",
-            api_key="",
-            device="cuda",
-            revision="",
-            compute_type="float16",
-            model_cache_dir=cache,
-            **common,
-        )
-
-    if BACKEND == "russian_whisper_turbo":
+    # Rus FT checkpoint (still Hugging Face SpeechSeq2Seq + ASR pipeline under the hood).
+    if BACKEND == "russian_whisper_hf":
         return STTConfig(
             provider="russian_whisper_hf",
             model="dvislobokov/whisper-large-v3-turbo-russian",
@@ -140,9 +97,10 @@ def build_stt_config() -> STTConfig:  # noqa: PLR0911, C901
             **common,
         )
 
-    if BACKEND == "granite_speech":
+    # IBM Granite (card languages exclude Russian — useful only as exploratory RU baseline).
+    if BACKEND == "granite_speech_hf":
         return STTConfig(
-            provider="granite_speech",
+            provider="granite_speech_hf",
             model="ibm-granite/granite-speech-4.1-2b",
             api_key="",
             device="cuda",
@@ -152,9 +110,10 @@ def build_stt_config() -> STTConfig:  # noqa: PLR0911, C901
             **common,
         )
 
-    if BACKEND == "gigaam_e2e_rnnt":
+    if BACKEND == "gigaam_hf":
+        # ``revision`` selects GigaAM head: ssl | ctc | rnnt | e2e_ctc | e2e_rnnt
         return STTConfig(
-            provider="gigaam",
+            provider="gigaam_hf",
             model="ai-sage/GigaAM-v3",
             api_key="",
             device="cuda",
@@ -164,21 +123,10 @@ def build_stt_config() -> STTConfig:  # noqa: PLR0911, C901
             **common,
         )
 
-    if BACKEND == "gigaam":
+    # Transformers publishes weights as microsoft/VibeVoice-ASR-HF; local CLI repos point at microsoft/VibeVoice-ASR.
+    if BACKEND == "vibevoice_hf":
         return STTConfig(
-            provider="gigaam",
-            model="ai-sage/GigaAM-v3",
-            api_key="",
-            device="cuda",
-            revision="e2e_rnnt",
-            compute_type="float16",
-            model_cache_dir=cache,
-            **common,
-        )
-
-    if BACKEND == "vibevoice_asr_hf":
-        return STTConfig(
-            provider="vibevoice_asr_hf",
+            provider="vibevoice_hf",
             model="microsoft/VibeVoice-ASR-HF",
             api_key="",
             device="cuda",
@@ -194,24 +142,20 @@ def build_stt_config() -> STTConfig:  # noqa: PLR0911, C901
 
 def build_service(cfg: STTConfig) -> SpeechRecognitionProtocol:  # noqa: PLR0911
     p = cfg.provider.lower().strip()
-    if p == "gigaam":
-        return GigaAMSTTService(cfg)
-    if p in {"whisper_hf_v2", "whisper_hf_v2_simple"}:
-        return WhisperHFV2STTService(cfg)
     if p in {"whisper_hf", "openai_whisper_hf"}:
         return WhisperHFSTTService(cfg)
-    if p in {"russian_whisper_hf", "whisper_ru_hf"}:
+    if p in {"russian_whisper_hf", "russian_whisper"}:
         return RussianWhisperHFSTTService(cfg)
-    if p in {"granite_speech", "granite_speech_hf"}:
+    if p in {"granite_speech_hf", "granite_speech"}:
         return GraniteSpeechSTTService(cfg)
-    if p in {"vibevoice_asr", "vibevoice_asr_hf"}:
-        return VibeVoiceASRSTTService(cfg)
+    if p in {"gigaam_hf", "gigaam"}:
+        return GigaAMSTTService(cfg)
+    if p in {"vibevoice_hf", "vibevoice"}:
+        return VibeVoiceHFSTTService(cfg)
     if p == "openrouter_audio":
         return OpenRouterAudioService(cfg)
     if p in {"openrouter_audio_stt", "openrouter_stt"}:
         return OpenRouterAudioSTTService(cfg)
-    if p == "transformers":
-        return TransformersSTTService(cfg)
     msg = f"Unknown provider={cfg.provider!r}"
     raise ValueError(msg)
 

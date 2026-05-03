@@ -1,4 +1,12 @@
-from .audio_to_mp3 import AudioToMp3Error, convert_bytes_to_mp3
-from .audio_transcode import AudioTranscodeError, transcode_bytes_to_wav
-from .logging import get_logger, setup_logging
-from .time_base_model import TimeBaseModel
+from .audio_to_mp3 import AudioToMp3Error as AudioToMp3Error
+from .audio_to_mp3 import convert_bytes_to_mp3 as convert_bytes_to_mp3
+from .logging import get_logger as get_logger
+from .logging import setup_logging as setup_logging
+from .stt import dir_has_model_weights as dir_has_model_weights
+from .stt import language_for_whisper as language_for_whisper
+from .stt import pick_device_string as pick_device_string
+from .stt import project_snapshot_dir as project_snapshot_dir
+from .stt import resolve_pretrained_source as resolve_pretrained_source
+from .stt import safe_hf_dirname as safe_hf_dirname
+from .stt import safe_revision_dirname as safe_revision_dirname
+from .time_base_model import TimeBaseModel as TimeBaseModel

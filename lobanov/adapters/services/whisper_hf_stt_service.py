@@ -1,143 +1,130 @@
-"""Whisper-large-v3 and Whisper-large-v3-turbo via Transformers ``pipeline``."""
-
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, override
+from uuid import uuid4
 
 import aiofiles.os
 import torch
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
-import lobanov.adapters.services.hf_stt_utils as _hf_stt_utils_side_effects  # noqa: F401
-from lobanov.adapters.services.hf_stt_utils import (
-    build_transcript_from_text,
-    ensure_hf_snapshot,
-    pipeline_device_number,
-    resolve_audio_path_str,
-    torch_dtype_from_stt_config,
-    whisper_parse_language,
-)
-from lobanov.domain.entities.transcript import Transcript
+from lobanov.domain.entities.transcript import Transcript, TranscriptLanguage
 from lobanov.infra.configs import STTConfig
-from lobanov.protocols import SpeechRecognitionProtocol
+from lobanov.protocols import SpeechRecognitionError, SpeechRecognitionProtocol
 from lobanov.utils.logging import get_logger
+from lobanov.utils.stt import language_for_whisper, pick_device_string, resolve_pretrained_source
 
 logger = get_logger(__name__)
 
 
-class SpeechRecognitionError(Exception):
-    pass
-
-
 class WhisperHFSTTService(SpeechRecognitionProtocol):
-    """Hugging Face Whisper via ``automatic-speech-recognition`` pipeline (e.g. openai/whisper-large-v3[-turbo])."""
+    """Local OpenAI Whisper via Hugging Face (e.g. ``openai/whisper-large-v3``, ``...-turbo``)."""
 
     def __init__(self, stt_config: STTConfig):
         self._stt = stt_config
-        self._model: Any = None
-        self._processor: Any = None
-        self._pipeline: Any = None
+        self._pipe: Any = None
         self._model_lock = asyncio.Lock()
 
-    def _load_model_sync(self) -> None:
-        local_dir = str(ensure_hf_snapshot(self._stt))
-        logger.info(
-            "Loading Whisper HF STT model {model!r} from {dir!r}",
-            model=self._stt.model,
-            dir=local_dir,
-        )
-        dtype = torch_dtype_from_stt_config(self._stt)
+    def _load_sync(self) -> Any:
+        source, from_pretrained_kw = resolve_pretrained_source(self._stt)
+        device = pick_device_string(self._stt.device)
+        dtype = torch.float16 if device.startswith("cuda") else torch.float32
 
-        self._processor = AutoProcessor.from_pretrained(local_dir)
-        self._model = AutoModelForSpeechSeq2Seq.from_pretrained(
-            local_dir,
+        model = AutoModelForSpeechSeq2Seq.from_pretrained(
+            source,
             dtype=dtype,
             low_cpu_mem_usage=True,
             use_safetensors=True,
+            **from_pretrained_kw,
         )
+        model.to(device)
 
-        requested_device = self._stt.device.lower().strip()
-        use_cuda = requested_device.startswith("cuda") and torch.cuda.is_available()
-        if use_cuda:
-            self._model = self._model.to(self._stt.device)
-        elif requested_device.startswith("cuda"):
-            logger.warning("CUDA requested but unavailable; Whisper HF STT falls back to CPU")
+        processor = AutoProcessor.from_pretrained(source, **from_pretrained_kw)
 
-        self._apply_whisper_generation_config_safety()
+        if device.startswith("cuda"):
+            gpu = 0
+            if ":" in device:
+                try:
+                    gpu = int(device.rsplit(":", maxsplit=1)[1])
+                except ValueError:
+                    gpu = 0
+            pipeline_device: int = gpu
+        else:
+            pipeline_device = -1
 
-        device = pipeline_device_number(self._stt.device)
-        self._pipeline = pipeline(
+        return pipeline(
             "automatic-speech-recognition",
-            model=self._model,
-            tokenizer=self._processor.tokenizer,
-            feature_extractor=self._processor.feature_extractor,
+            model=model,
+            tokenizer=processor.tokenizer,
+            feature_extractor=processor.feature_extractor,
             dtype=dtype,
-            device=device,
+            device=pipeline_device,
         )
 
-    def _apply_whisper_generation_config_safety(self) -> None:
-        if self._model is None:
-            return
-        gc = self._model.generation_config
-        gc.logprob_threshold = None
-        gc.no_speech_threshold = None
-
-    async def _get_pipeline(self) -> Any:
-        if self._pipeline is not None:
-            return self._pipeline
+    async def _get_pipe(self) -> Any:
+        if self._pipe is not None:
+            return self._pipe
         async with self._model_lock:
-            if self._pipeline is not None:
-                return self._pipeline
-            await asyncio.to_thread(self._load_model_sync)
-        return self._pipeline
+            if self._pipe is None:
+                self._pipe = await asyncio.to_thread(self._load_sync)
+        return self._pipe
 
-    def _generate_kwargs(self, language: str) -> dict[str, Any]:
+    def _whisper_generate_kwargs(self, language: str) -> dict[str, Any]:
         return {
             "task": "transcribe",
-            "language": whisper_parse_language(language),
-            "num_beams": max(1, self._stt.beam_size),
-            "temperature": self._stt.temperature,
-            "condition_on_prev_tokens": self._stt.condition_on_previous_text,
+            "language": language_for_whisper(language),
         }
 
-    def _return_timestamps_arg(self) -> bool | str:
-        if self._stt.word_timestamps:
-            return "word"
-        return False
-
-    async def _transcribe(self, file_path: str, language: str) -> str:
-        asr = await self._get_pipeline()
-        result = await asyncio.to_thread(
-            asr,
-            file_path,
-            generate_kwargs=self._generate_kwargs(language),
-            return_timestamps=self._return_timestamps_arg(),
+    async def _run_whisper_pipe(self, path: str, gen_kw: dict[str, Any]) -> dict[str, Any]:
+        pipe = await self._get_pipe()
+        out = await asyncio.to_thread(
+            lambda: pipe(path, return_timestamps=True, generate_kwargs=dict(gen_kw)),
         )
-        if isinstance(result, dict):
-            text = result.get("text", "")
-            if isinstance(text, str):
-                return text
-        msg = f"Unexpected Whisper HF STT result: {type(result).__name__}"
-        raise SpeechRecognitionError(msg)
+        if not isinstance(out, dict):
+            whisper_msg_type = f"Unexpected Whisper ASR output type: {type(out).__name__}"
+            raise SpeechRecognitionError(whisper_msg_type)
+        return out
+
+    async def _execute_whisper(self, path_resolved: str, language: str) -> dict[str, Any]:
+        return await self._run_whisper_pipe(path_resolved, self._whisper_generate_kwargs(language))
 
     @override
     async def transcribe_audio(self, file_path: str, language: str) -> Transcript:
-        path_str = await asyncio.to_thread(resolve_audio_path_str, file_path)
-        if not await aiofiles.os.path.exists(path_str):
-            err_msg = f"Audio file not found: {path_str}"
-            raise SpeechRecognitionError(err_msg)
+        path_resolved = await asyncio.to_thread(lambda: str(Path(file_path).expanduser().resolve()))
+        if not await aiofiles.os.path.exists(path_resolved):
+            whisper_err_missing = f"Audio file not found: {path_resolved}"
+            raise SpeechRecognitionError(whisper_err_missing)
 
         try:
-            text = await self._transcribe(path_str, language)
-            return build_transcript_from_text(text)
+            out = await self._execute_whisper(path_resolved, language)
+            text = str(out.get("text", "") or "").strip()
+            if not text:
+                chunks = out.get("chunks")
+                if isinstance(chunks, list):
+                    parts = [str(c["text"]) for c in chunks if isinstance(c, dict) and c.get("text")]
+                    text = "".join(parts).strip()
+            text = " ".join(text.split())
+
+            return Transcript(
+                id=uuid4(),
+                session_id=uuid4(),
+                audio_record_id=uuid4(),
+                text=text,
+                language=TranscriptLanguage.RU,
+                confidence_score=0.8,
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
+            )
         except SpeechRecognitionError:
             raise
         except Exception as e:
-            logger.exception("Failed to transcribe audio with Whisper HF")
-            err_msg = f"Failed to transcribe audio with Whisper HF: {e}"
-            raise SpeechRecognitionError(err_msg) from e
+            logger.exception("Whisper HF transcription failed")
+            whisper_err_detail = str(e)
+            whisper_err_msg = f"Whisper HF: {whisper_err_detail}"
+            raise SpeechRecognitionError(whisper_err_msg) from e
 
     @override
     async def get_supported_languages(self) -> list[str]:
-        return ["ru-RU", "ru", "en", "en-US"]
+        return ["ru-RU", "ru"]

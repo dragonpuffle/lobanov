@@ -1,179 +1,203 @@
-"""Microsoft VibeVoice ASR via ``VibeVoiceAsrForConditionalGeneration`` (Transformers HF release)."""
-
 from __future__ import annotations
 
 import asyncio
-from typing import Any, override
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any, cast, override
+from uuid import uuid4
 
 import aiofiles.os
 import torch
 
-import lobanov.adapters.services.hf_stt_utils as _hf_stt_utils_side_effects  # noqa: F401
-from lobanov.adapters.services.hf_stt_utils import (
-    build_transcript_from_text,
-    ensure_hf_snapshot,
-    resolve_audio_path_str,
-    torch_dtype_from_stt_config,
-)
-from lobanov.domain.entities.transcript import Transcript
+from lobanov.domain.entities.transcript import Transcript, TranscriptLanguage
 from lobanov.infra.configs import STTConfig
-from lobanov.protocols import SpeechRecognitionProtocol
+from lobanov.protocols import SpeechRecognitionError, SpeechRecognitionProtocol
 from lobanov.utils.logging import get_logger
+from lobanov.utils.stt import pick_device_string, resolve_pretrained_source
 
 logger = get_logger(__name__)
 
-
-class SpeechRecognitionError(Exception):
-    pass
-
-
-def _decode_parsed_segments(parsed: Any) -> str | None:
-    if not isinstance(parsed, list):
-        return None
-    parts: list[str] = []
-    for seg in parsed:
-        if not isinstance(seg, dict):
-            continue
-        content = seg.get("Content") or seg.get("content") or seg.get("text")
-        if isinstance(content, str) and content.strip():
-            parts.append(content.strip())
-    return " ".join(parts).strip() or None
+_OFFICIAL_VIBEVOICE_ASR_IDS = frozenset(
+    {"microsoft/VibeVoice-ASR", "microsoft/vibevoice-asr"},
+)
 
 
-def _first_decode_candidate(first: Any) -> str | None:
-    if isinstance(first, str) and first.strip():
-        return first.strip()
-    glued = _decode_parsed_segments(first)
-    if glued:
-        return glued
-    if isinstance(first, dict):
-        txt = first.get("text") or first.get("Content") or first.get("content") or ""
-        if isinstance(txt, str) and txt.strip():
-            return txt.strip()
-    return None
+def _resolve_vibevoice_hub_id(original: str) -> str:
+    mid = original.strip()
+    if mid in _OFFICIAL_VIBEVOICE_ASR_IDS:
+        mapped = "microsoft/VibeVoice-ASR-HF"
+        logger.info(
+            "VibeVoice transformers: mapping Hub id {from_id!r} -> {to_id!r} (non-HF id is for repo/CLI demos).",
+            from_id=mid,
+            to_id=mapped,
+        )
+        return mapped
+    return mid
 
 
-def _decode_generation(processor: Any, generated_ids: Any) -> str:
-    decode_fn = getattr(processor, "decode", None)
-    if decode_fn is None:
-        msg = "VibeVoice processor has no decode"
-        raise SpeechRecognitionError(msg)
-
-    for fmt in ("parsed", "text"):
-        try:
-            out = decode_fn(generated_ids, return_format=fmt)
-        except TypeError:
-            out = decode_fn(generated_ids)
-
-        first = out[0] if isinstance(out, list) and out else out
-        candidate = _first_decode_candidate(first)
-        if candidate:
-            return candidate
-
-    detail = "VibeVoice decode returned unrecognized structure"
-    raise SpeechRecognitionError(detail)
+def pipeline_torch_dtype(device: str, compute_type: str) -> torch.dtype:
+    ct = compute_type.strip().lower()
+    if ct in {"float32", "fp32", "int8", "bf16-off"}:
+        return torch.float32
+    if "bfloat16" in ct or ct in {"bf16", "bfp16"}:
+        return torch.bfloat16 if device.startswith("cuda") else torch.float32
+    if device.startswith("cuda"):
+        return torch.float16
+    return torch.float32
 
 
-class VibeVoiceASRSTTService(SpeechRecognitionProtocol):
-    """Use ``microsoft/VibeVoice-ASR-HF`` (Transformers-native); CLI/demo often uses ``microsoft/VibeVoice-ASR``."""
+def _flatten_processor_decode_output(raw: Any) -> str:  # noqa: C901, PLR0911
+    if isinstance(raw, str):
+        return " ".join(raw.split())
+
+    candidates: Any = raw
+    if isinstance(raw, (list, tuple)) and raw:
+        candidates = raw[0]
+
+    if isinstance(candidates, str):
+        return " ".join(candidates.split())
+
+    if isinstance(candidates, dict):
+        text = candidates.get("Content") or candidates.get("content") or candidates.get("text")
+        if isinstance(text, list):
+            return _flatten_processor_decode_output(text)
+        if isinstance(text, str):
+            return " ".join(text.split())
+        transcript = candidates.get("transcript") or candidates.get("Transcript")
+        if isinstance(transcript, str):
+            return " ".join(transcript.split())
+
+    if isinstance(candidates, list):
+        parts: list[str] = []
+        for item in candidates:
+            if isinstance(item, dict):
+                content = item.get("Content") or item.get("content") or item.get("text")
+                if isinstance(content, str):
+                    parts.append(content)
+            elif isinstance(item, str):
+                parts.append(item)
+        return " ".join(" ".join(parts).split())
+
+    return " ".join(str(raw).split())
+
+
+try:
+    from transformers import (
+        AutoProcessor,
+        VibeVoiceAsrForConditionalGeneration,
+    )
+except ImportError:
+    AutoProcessor = object  # type: ignore[misc, assignment]
+    VibeVoiceAsrForConditionalGeneration = None  # type: ignore[misc, assignment]
+
+
+class VibeVoiceHFSTTService(SpeechRecognitionProtocol):
+    """Microsoft VibeVoice ASR via transformers (``microsoft/VibeVoice-ASR-HF``).
+
+    The official standalone inference script targets ``microsoft/VibeVoice-ASR``, while transformers weights publish
+    as ``microsoft/VibeVoice-ASR-HF`` — aliases are redirected automatically here.
+    """
 
     def __init__(self, stt_config: STTConfig):
         self._stt = stt_config
-        self._model: Any = None
-        self._processor: Any = None
         self._model_lock = asyncio.Lock()
+        self._bundle: tuple[Any, Any] | None = None
 
-    def _load_model_sync(self) -> None:
-        model_id = self._stt.model.strip()
-        if model_id == "microsoft/VibeVoice-ASR":
+    def _effective_cfg(self) -> STTConfig:
+        mapped = _resolve_vibevoice_hub_id(self._stt.model)
+        if mapped.strip() != self._stt.model.strip():
+            return self._stt.model_copy(update={"model": mapped})
+        return self._stt
+
+    def _load_sync(self) -> tuple[Any, Any]:
+        if VibeVoiceAsrForConditionalGeneration is None:
             msg = (
-                "For Python Transformers set stt.model to 'microsoft/VibeVoice-ASR-HF'. "
-                "See https://github.com/microsoft/VibeVoice and HF microsoft/VibeVoice-ASR-HF"
+                "transformers is too old or missing `VibeVoiceAsrForConditionalGeneration`; upgrade transformers "
+                "to receive the microsoft/VibeVoice-ASR-HF integration."
             )
-            logger.warning("{msg}", msg=msg)
-
-        local_dir = str(ensure_hf_snapshot(self._stt))
-        logger.info("Loading VibeVoice ASR from {dir!r}", dir=local_dir)
-
-        dtype = torch_dtype_from_stt_config(self._stt, default=torch.float16)
-
-        try:
-            from transformers import AutoProcessor, VibeVoiceAsrForConditionalGeneration  # noqa: PLC0415
-        except ImportError as e:
-            detail = (
-                "This environment's Transformers does not expose VibeVoiceAsrForConditionalGeneration; "
-                "upgrade Transformers per https://github.com/microsoft/VibeVoice (ASR HF release)."
-            )
-            raise SpeechRecognitionError(detail) from e
-
-        self._processor = AutoProcessor.from_pretrained(local_dir)
-        self._model = VibeVoiceAsrForConditionalGeneration.from_pretrained(
-            local_dir,
-            device_map="auto",
-            torch_dtype=dtype,
-        )
-
-    async def _get_model_stack(self) -> tuple[Any, Any]:
-        if self._model is not None and self._processor is not None:
-            return self._model, self._processor
-        async with self._model_lock:
-            if self._model is not None and self._processor is not None:
-                return self._model, self._processor
-            await asyncio.to_thread(self._load_model_sync)
-        return self._model, self._processor
-
-    def _infer_sync(self, audio_path: str) -> str:
-        model = self._model
-        processor = self._processor
-        if model is None or processor is None:
-            msg = "VibeVoice ASR model not loaded"
             raise SpeechRecognitionError(msg)
 
-        prompt = self._stt.initial_prompt.strip() or None
+        cfg = self._effective_cfg()
+        source, kwa = resolve_pretrained_source(cfg)
 
-        apply_fn = getattr(processor, "apply_transcription_request", None)
-        if apply_fn is None:
-            detail = (
-                "VibeVoice HF processor lacks apply_transcription_request; upgrade Transformers from "
-                "https://github.com/microsoft/VibeVoice"
+        processor = AutoProcessor.from_pretrained(source, **kwa)
+        device_hint = pick_device_string(self._stt.device)
+        dtype = pipeline_torch_dtype(device_hint, self._stt.compute_type)
+
+        vv_cls = cast("Any", VibeVoiceAsrForConditionalGeneration)
+        if device_hint.startswith("cuda") and torch.cuda.is_available():
+            model = vv_cls.from_pretrained(
+                source,
+                dtype=dtype,
+                device_map="auto",
+                **kwa,
             )
-            raise SpeechRecognitionError(detail)
+        else:
+            model = vv_cls.from_pretrained(
+                source,
+                dtype=dtype,
+                **kwa,
+            ).to("cpu")
 
-        inputs = apply_fn(audio=audio_path, prompt=prompt)
+        logger.info("Loaded VibeVoice ASR from {src!r}", src=str(source))
+        return processor, model
 
-        tgt_device = getattr(model, "device", None)
-        tgt_dtype = getattr(model, "dtype", None)
+    async def _get_bundle(self) -> tuple[Any, Any]:
+        if self._bundle is not None:
+            return self._bundle
+        async with self._model_lock:
+            if self._bundle is None:
+                self._bundle = await asyncio.to_thread(self._load_sync)
+        return self._bundle
 
-        if tgt_device is not None:
-            inputs = inputs.to(device=tgt_device, dtype=tgt_dtype) if tgt_dtype is not None else inputs.to(tgt_device)
-        elif tgt_dtype is not None:
-            inputs = inputs.to(dtype=tgt_dtype)
+    def _infer_one_sync(self, path: Path, processor: Any, model: Any) -> str:
+        request_inputs = processor.apply_transcription_request(
+            audio=str(path),
+            prompt=None,
+        )
+        inputs_on_device = request_inputs.to(device=model.device, dtype=model.dtype)
 
-        output_ids = model.generate(**inputs)
-        inp_len = inputs["input_ids"].shape[-1]
-        generated = output_ids[:, inp_len:]
+        outputs = model.generate(**inputs_on_device)
 
-        return _decode_generation(processor, generated)
+        cutoff = inputs_on_device["input_ids"].shape[-1]
+        sliced_ids = outputs[:, cutoff:]
+
+        try:
+            decoded = processor.decode(sliced_ids, return_format="text")
+            return _flatten_processor_decode_output(decoded)
+        except Exception:
+            decoded = processor.decode(sliced_ids, return_format="parsed")
+            return _flatten_processor_decode_output(decoded)
 
     @override
     async def transcribe_audio(self, file_path: str, language: str) -> Transcript:
-        del language
-        path_str = await asyncio.to_thread(resolve_audio_path_str, file_path)
-        if not await aiofiles.os.path.exists(path_str):
-            err_msg = f"Audio file not found: {path_str}"
-            raise SpeechRecognitionError(err_msg)
+        _ = language
+        path_resolved = await asyncio.to_thread(lambda: Path(file_path).expanduser().resolve())
+        if not await aiofiles.os.path.exists(str(path_resolved)):
+            vv_miss_msg = f"Audio file not found: {path_resolved}"
+            raise SpeechRecognitionError(vv_miss_msg)
 
+        processor, model = await self._get_bundle()
         try:
-            await self._get_model_stack()
-            text = await asyncio.to_thread(self._infer_sync, path_str)
-            return build_transcript_from_text(text)
+            text = await asyncio.to_thread(self._infer_one_sync, path_resolved, processor, model)
+            return Transcript(
+                id=uuid4(),
+                session_id=uuid4(),
+                audio_record_id=uuid4(),
+                text=text,
+                language=TranscriptLanguage.RU,
+                confidence_score=0.78,
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
+            )
         except SpeechRecognitionError:
             raise
         except Exception as e:
-            logger.exception("Failed to transcribe audio with VibeVoice ASR")
-            msg = f"Failed to transcribe audio with VibeVoice ASR: {e}"
-            raise SpeechRecognitionError(msg) from e
+            logger.exception("VibeVoice transcription failed")
+            vv_exc_detail = str(e)
+            vv_exc_msg = f"VibeVoice: {vv_exc_detail}"
+            raise SpeechRecognitionError(vv_exc_msg) from e
 
     @override
     async def get_supported_languages(self) -> list[str]:
-        return ["multi", "ru-RU", "ru"]
+        return ["multi", "en"]

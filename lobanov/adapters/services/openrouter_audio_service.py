@@ -10,7 +10,7 @@ import httpx
 
 from lobanov.domain.entities.transcript import Transcript, TranscriptLanguage
 from lobanov.infra.configs import STTConfig
-from lobanov.protocols import SpeechRecognitionProtocol
+from lobanov.protocols import SpeechRecognitionError, SpeechRecognitionProtocol
 from lobanov.utils.audio_to_mp3 import AudioToMp3Error, convert_bytes_to_mp3
 from lobanov.utils.logging import get_logger
 
@@ -31,10 +31,6 @@ _SUFFIX_TO_AUDIO_FORMAT: Final[dict[str, str]] = {
     "aif": "aiff",
     "opus": "ogg",
 }
-
-
-class SpeechRecognitionError(Exception):
-    pass
 
 
 def _message_content_to_text(content: object) -> str:

@@ -34,11 +34,12 @@ document_path = "./storage/documents"
 max_document_size = 10485760
 
 # GPU: device = "cuda", compute_type = "float16"
-# CPU: device = "cpu", compute_type = "float32"
+# Local HF STT providers: whisper_hf, russian_whisper_hf, granite_speech_hf, gigaam_hf, vibevoice_hf
+# Whisper large v3 turbo: model = "openai/whisper-large-v3-turbo" | large v3: "openai/whisper-large-v3"
 # OpenRouter audio chat: provider = "openrouter_audio", set model to an audio-input chat model id, set api_key
 # OpenRouter STT: provider = "openrouter_audio_stt", set model to an audio transcription model id, set api_key
 [stt]
-provider = "transformers"
+provider = "whisper_hf"
 model = "openai/whisper-large-v3-turbo"
 api_key = ""
 device = "cuda"

@@ -1,6 +1,6 @@
+from __future__ import annotations
+
 import asyncio
-import contextlib
-from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, override
@@ -10,135 +10,91 @@ import aiofiles.os
 import torch
 from transformers import AutoModel
 
-from lobanov.adapters.services.hf_stt_utils import (
-    ensure_hf_snapshot,
-    get_hf_model_dir_with_revision,
-    has_hf_snapshot_weights,
-)
 from lobanov.domain.entities.transcript import Transcript, TranscriptLanguage
 from lobanov.infra.configs import STTConfig
-from lobanov.protocols import SpeechRecognitionProtocol
+from lobanov.protocols import SpeechRecognitionError, SpeechRecognitionProtocol
 from lobanov.utils.logging import get_logger
+from lobanov.utils.stt import dir_has_model_weights, pick_device_string, resolve_pretrained_source
 
 logger = get_logger(__name__)
 
 
-class SpeechRecognitionError(Exception):
-    pass
-
-
-@torch.compiler.disable
-def _gigaam_from_pretrained(local_dir: str) -> Any:
-    """Load hub snapshot; decorator avoids dynamo on ``torch.max`` in torchaudio (CM form conflicts in-thread)."""
-    return AutoModel.from_pretrained(
-        local_dir,
-        trust_remote_code=True,
-        low_cpu_mem_usage=False,
-    )
-
-
-@contextlib.contextmanager
-def _cpu_default_device_guard() -> Iterator[None]:
-    """Force ``torch.zeros`` etc. to CPU during GigaAM/torchaudio Mel init (hub code uses default device)."""
-    try:
-        prev_default = torch.get_default_device()
-    except Exception:
-        prev_default = None
-    torch.set_default_device("cpu")
-    try:
-        yield
-    finally:
-        if prev_default is not None:
-            with contextlib.suppress(Exception):
-                torch.set_default_device(prev_default)
+def resolve_device_for_giga(stt: STTConfig) -> torch.device:
+    device_str = pick_device_string(stt.device)
+    if device_str.startswith("cuda") and torch.cuda.is_available():
+        return torch.device(device_str)
+    return torch.device("cpu")
 
 
 class GigaAMSTTService(SpeechRecognitionProtocol):
+    """GigaAM v3 remote-code hub model (``ai-sage/GigaAM-v3``) with selectable ``revision`` head."""
+
     def __init__(self, stt_config: STTConfig):
         self._stt = stt_config
-        rev = stt_config.revision.strip()
-        self._revision: str | None = rev or None
-        self._model: Any = None
         self._model_lock = asyncio.Lock()
+        self._model: Any | None = None
 
-    def _maybe_log_download_start(self, model_dir: Path) -> None:
-        if has_hf_snapshot_weights(model_dir):
-            return
-        rev_label = self._revision if self._revision is not None else "default"
-        logger.info(
-            "Downloading GigaAM snapshot {model!r} revision {rev!r} into {path}",
-            model=self._stt.model,
-            rev=rev_label,
-            path=str(model_dir),
+    def _load_sync(self) -> Any:
+        source, from_pretrained_kw = resolve_pretrained_source(self._stt)
+        p = Path(source).expanduser().resolve()
+
+        kwa = dict(from_pretrained_kw)
+        if not (p.is_dir() and dir_has_model_weights(p)):
+            rev = self._stt.revision.strip() or "e2e_rnnt"
+            kwa.setdefault("revision", rev)
+
+        logger.info("Loading GigaAM from {src!r} kwa={kw!r}", src=str(source), kw=kwa)
+
+        model = AutoModel.from_pretrained(
+            source,
+            trust_remote_code=True,
+            **kwa,
         )
-
-    def _load_model_sync(self) -> Any:
-        model_dir = get_hf_model_dir_with_revision(self._stt)
-        self._maybe_log_download_start(model_dir)
-        local_dir_path = ensure_hf_snapshot(self._stt)
-        local_dir_str = str(local_dir_path)
-        logger.info("Loading GigaAM from {path}", path=local_dir_str)
-        with _cpu_default_device_guard():
-            model = _gigaam_from_pretrained(local_dir_str)
-        if hasattr(model, "to"):
-            model = model.to(self._stt.device)
+        model.to(resolve_device_for_giga(self._stt))
+        logger.info(
+            "GigaAM weights loaded revision={rw!s}",
+            rw=str(kwa.get("revision", "")),
+        )
         return model
 
     async def _get_model(self) -> Any:
         if self._model is not None:
             return self._model
         async with self._model_lock:
-            if self._model is not None:
-                return self._model
-            self._model = await asyncio.to_thread(self._load_model_sync)
+            if self._model is None:
+                self._model = await asyncio.to_thread(self._load_sync)
         return self._model
 
     @override
     async def transcribe_audio(self, file_path: str, language: str) -> Transcript:
-        if not await aiofiles.os.path.exists(file_path):
-            err_msg = f"Audio file not found: {file_path}"
-            raise SpeechRecognitionError(err_msg)
+        _ = language
+        path_resolved = await asyncio.to_thread(lambda: str(Path(file_path).expanduser().resolve()))
+        if not await aiofiles.os.path.exists(path_resolved):
+            giga_miss_msg = f"Audio file not found: {path_resolved}"
+            raise SpeechRecognitionError(giga_miss_msg)
 
+        model = await self._get_model()
         try:
-            await self._get_model()
-            transcript_text = await asyncio.to_thread(self._run_inference, file_path)
-            transcript_text = " ".join(transcript_text.split())
-
+            raw = await asyncio.to_thread(model.transcribe, path_resolved)
+            text = " ".join(str(raw).strip().split())
             return Transcript(
                 id=uuid4(),
                 session_id=uuid4(),
                 audio_record_id=uuid4(),
-                text=transcript_text,
+                text=text,
                 language=TranscriptLanguage.RU,
                 confidence_score=0.8,
                 created_at=datetime.now(UTC),
                 updated_at=datetime.now(UTC),
             )
+        except SpeechRecognitionError:
+            raise
         except Exception as e:
-            logger.exception("Failed to transcribe audio with GigaAM")
-            err_msg = f"Failed to transcribe audio with GigaAM: {e}"
-            raise SpeechRecognitionError(err_msg) from e
-
-    def _run_inference(self, file_path: str) -> str:
-        model = self._model
-        for method_name in ("transcribe", "transcribe_file", "asr"):
-            method = getattr(model, method_name, None)
-            if callable(method):
-                result = method(file_path)
-                if isinstance(result, str):
-                    return result
-                if isinstance(result, dict):
-                    text = result.get("text", "")
-                    if isinstance(text, str):
-                        return text
-                if isinstance(result, list) and result and isinstance(result[0], dict):
-                    text = result[0].get("text", "")
-                    if isinstance(text, str):
-                        return text
-
-        msg = "Unsupported GigaAM model API. Expected one of methods: transcribe, transcribe_file, asr"
-        raise SpeechRecognitionError(msg)
+            logger.exception("GigaAM transcription failed")
+            giga_exc_detail = str(e)
+            giga_exc_msg = f"GigaAM: {giga_exc_detail}"
+            raise SpeechRecognitionError(giga_exc_msg) from e
 
     @override
     async def get_supported_languages(self) -> list[str]:
-        return ["ru-RU", "ru"]
+        return ["ru", "ru-RU"]

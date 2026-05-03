@@ -1,149 +1,168 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, override
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any, cast, override
+from uuid import uuid4
 
 import aiofiles.os
 import torch
 import torchaudio
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor
 
-import lobanov.adapters.services.hf_stt_utils as _hf_stt_utils_side_effects  # noqa: F401
-from lobanov.adapters.services.hf_stt_utils import (
-    build_transcript_from_text,
-    ensure_hf_snapshot,
-    resolve_audio_path_str,
-    torch_dtype_from_stt_config,
-)
-from lobanov.domain.entities.transcript import Transcript
+from lobanov.domain.entities.transcript import Transcript, TranscriptLanguage
 from lobanov.infra.configs import STTConfig
-from lobanov.protocols import SpeechRecognitionProtocol
+from lobanov.protocols import SpeechRecognitionError, SpeechRecognitionProtocol
 from lobanov.utils.logging import get_logger
+from lobanov.utils.stt import pick_device_string, resolve_pretrained_source
 
 logger = get_logger(__name__)
 
-GRANITE_ASR_PROMPT = "<|audio|>transcribe the speech with proper punctuation and capitalization."
+_GRANITE_CARD_LANGUAGES = ["en", "en-US", "fr", "fr-FR", "de", "de-DE", "es", "es-ES", "pt", "pt-BR", "ja", "ja-JP"]
+_GRANITE_INPUT_SAMPLE_RATE = 16_000
 
 
-class SpeechRecognitionError(Exception):
-    pass
-
-
-def _mono_16k_wav(audio_path: str) -> tuple[torch.Tensor, int]:
-    wav, sr = torchaudio.load(audio_path, normalize=True)
+def _load_mono_16k(path: Path) -> torch.Tensor:
+    wav, sr = torchaudio.load(str(path), normalize=True)
     if wav.shape[0] > 1:
         wav = wav.mean(dim=0, keepdim=True)
-    target_sr = 16000
-    if sr != target_sr:
-        wav = torchaudio.functional.resample(wav, sr, target_sr)
-    return wav, target_sr
+    if sr != _GRANITE_INPUT_SAMPLE_RATE:
+        wav = torchaudio.functional.resample(wav, sr, _GRANITE_INPUT_SAMPLE_RATE)
+    return wav.cpu()
 
 
 class GraniteSpeechSTTService(SpeechRecognitionProtocol):
-    """``ibm-granite/granite-speech-4.1-2b`` style multimodal seq2seq (English prompt required per model card)."""
+    """IBM Granite Speech (``ibm-granite/granite-speech-4.1-2b``) via Transformers.
+
+    English/French/German/Spanish/Portuguese/Japanese are listed on the model card; Russian is not officially
+    supported — still usable as an experimental baseline for RU audio.
+    """
 
     def __init__(self, stt_config: STTConfig):
         self._stt = stt_config
-        self._model: Any = None
-        self._processor: Any = None
-        self._tokenizer: Any = None
         self._model_lock = asyncio.Lock()
+        self._bundle: tuple[Any, Any] | None = None
+        self._warned_ru_audio = False
 
-    def _resolve_torch_device(self) -> torch.device:
-        req = self._stt.device.lower().strip()
-        if req.startswith("cuda") and torch.cuda.is_available():
-            return torch.device(self._stt.device)
-        return torch.device("cpu")
+    def _maybe_warn_about_russian(self, language: str) -> None:
+        if language.lower().startswith("ru") and not self._warned_ru_audio:
+            logger.warning(
+                "Granite Speech: ru/ru-RU audio targets an unsupported language on the HF model card "
+                "(English/French/German/Spanish/Portuguese/Japanese). Treat transcripts as exploratory only.",
+            )
+            self._warned_ru_audio = True
 
-    def _load_model_sync(self) -> None:
-        local_dir = str(ensure_hf_snapshot(self._stt))
-        logger.info("Loading Granite Speech from {dir!r}", dir=local_dir)
-        dt = torch_dtype_from_stt_config(self._stt, default=torch.float32)
+    def _granite_torch_dtype(self, *, cuda: bool) -> torch.dtype:
+        ct = self._stt.compute_type.lower()
+        if "bfloat16" in ct or ct in {"bf16", "bfp16"}:
+            return torch.bfloat16 if cuda and torch.cuda.is_bf16_supported() else torch.float32
+        if ct in {"float32", "fp32"}:
+            return torch.float32
+        return torch.bfloat16 if cuda and torch.cuda.is_bf16_supported() else torch.float16 if cuda else torch.float32
 
-        torch_device = self._resolve_torch_device()
-        processor = AutoProcessor.from_pretrained(local_dir)
-        tokenizer = processor.tokenizer
+    def _load_sync(self) -> tuple[Any, Any]:
+        source, from_pretrained_kw = resolve_pretrained_source(self._stt)
+        device_str = pick_device_string(self._stt.device)
 
-        load_kwargs: dict[str, Any] = {"dtype": dt}
-        if torch_device.type == "cuda":
-            load_kwargs["device_map"] = str(torch_device)
+        processor: Any = AutoProcessor.from_pretrained(source, **from_pretrained_kw)
+        cuda = device_str.startswith("cuda")
+        dtype = self._granite_torch_dtype(cuda=cuda)
 
-        try:
-            model = AutoModelForSpeechSeq2Seq.from_pretrained(local_dir, **load_kwargs)
-        except Exception:
-            logger.exception("Granite Speech from_pretrained failed; retrying without device_map")
-            model = AutoModelForSpeechSeq2Seq.from_pretrained(local_dir, dtype=dt)
+        if cuda:
+            model = AutoModelForSpeechSeq2Seq.from_pretrained(
+                source,
+                device_map="auto",
+                dtype=dtype,
+                **from_pretrained_kw,
+            )
+        else:
+            model = AutoModelForSpeechSeq2Seq.from_pretrained(
+                source,
+                dtype=dtype,
+                **from_pretrained_kw,
+            ).to("cpu")
 
-        self._processor = processor
-        self._tokenizer = tokenizer
-        self._model = model.to(torch_device)
+        logger.info(
+            "Loaded Granite Speech src={src!r} dtype={dt!s} cuda={cuda}",
+            src=str(source),
+            dt=str(dtype),
+            cuda=cuda,
+        )
+        return processor, model
 
-    async def _get_stack(self) -> tuple[Any, Any, Any]:
-        if self._model is not None and self._processor is not None and self._tokenizer is not None:
-            return self._model, self._processor, self._tokenizer
+    async def _get_bundle(self) -> tuple[Any, Any]:
+        if self._bundle is not None:
+            return self._bundle
         async with self._model_lock:
-            if self._model is not None and self._processor is not None and self._tokenizer is not None:
-                return self._model, self._processor, self._tokenizer
-            await asyncio.to_thread(self._load_model_sync)
-        return self._model, self._processor, self._tokenizer
+            if self._bundle is None:
+                self._bundle = await asyncio.to_thread(self._load_sync)
+        return self._bundle
 
-    def _infer_sync(self, audio_path: str) -> str:
-        model = self._model
-        processor = self._processor
-        tokenizer = self._tokenizer
-        if model is None or processor is None or tokenizer is None:
-            msg = "Granite Speech model not loaded"
-            raise SpeechRecognitionError(msg)
+    def _infer_one_sync(self, path: Path, processor: Any, model: Any) -> str:
+        device_torch = cast("torch.device", next(model.parameters()).device)
 
-        torch_device = next(model.parameters()).device
-        dev_str = "cuda" if torch_device.type == "cuda" else "cpu"
+        wav = _load_mono_16k(path)
 
-        wav, _sr_actual = _mono_16k_wav(audio_path)
-
-        chat = [{"role": "user", "content": GRANITE_ASR_PROMPT}]
+        tokenizer = processor.tokenizer
+        user_prompt = "<|audio|>transcribe the speech with proper punctuation and capitalization."
+        chat = [{"role": "user", "content": user_prompt}]
         prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
 
-        model_inputs = processor(prompt, wav, device=dev_str, return_tensors="pt").to(torch_device)
+        raw_inputs = processor(prompt, wav, return_tensors="pt")
+        inputs = raw_inputs.to(device_torch)
 
-        beams = max(1, self._stt.beam_size)
-        model_outputs = model.generate(
-            **model_inputs,
-            max_new_tokens=448,
-            do_sample=self._stt.temperature > 0,
-            temperature=self._stt.temperature if self._stt.temperature > 0 else None,
-            num_beams=beams,
-        )
+        beams = max(1, int(self._stt.beam_size))
+        temperature = float(self._stt.temperature)
 
-        num_input_tokens = model_inputs["input_ids"].shape[-1]
-        new_tokens = model_outputs[:, num_input_tokens:]
-        texts = tokenizer.batch_decode(new_tokens, add_special_tokens=False, skip_special_tokens=True)
-        if not texts:
-            msg = "Granite Speech returned empty decoding"
-            raise SpeechRecognitionError(msg)
-        return texts[0]
+        forward = dict(inputs)
+
+        gen_kwargs = {
+            **forward,
+            "max_new_tokens": 448,
+            "num_beams": beams,
+            "do_sample": temperature > 0,
+        }
+        if temperature > 0:
+            gen_kwargs["temperature"] = temperature
+
+        outputs = cast("torch.Tensor", model.generate(**gen_kwargs))
+
+        input_ids = cast("torch.Tensor", forward["input_ids"])
+        prompt_len = int(input_ids.shape[-1])
+        continuation_ids = outputs[0, prompt_len:].detach().cpu()
+        decoded = tokenizer.decode(continuation_ids, skip_special_tokens=True)
+        return " ".join(decoded.split())
 
     @override
     async def transcribe_audio(self, file_path: str, language: str) -> Transcript:
-        del language
-        path_str = await asyncio.to_thread(resolve_audio_path_str, file_path)
-        if not await aiofiles.os.path.exists(path_str):
-            err_msg = f"Audio file not found: {path_str}"
-            raise SpeechRecognitionError(err_msg)
+        self._maybe_warn_about_russian(language)
+        path_resolved = await asyncio.to_thread(lambda: Path(file_path).expanduser().resolve())
+        if not await aiofiles.os.path.exists(str(path_resolved)):
+            msg = f"Audio file not found: {path_resolved}"
+            raise SpeechRecognitionError(msg)
 
+        processor, model = await self._get_bundle()
         try:
-            await self._get_stack()
-            text = await asyncio.to_thread(self._infer_sync, path_str)
-            return build_transcript_from_text(text)
+            text = await asyncio.to_thread(self._infer_one_sync, path_resolved, processor, model)
+            return Transcript(
+                id=uuid4(),
+                session_id=uuid4(),
+                audio_record_id=uuid4(),
+                text=text,
+                language=TranscriptLanguage.RU,
+                confidence_score=0.75,
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
+            )
         except SpeechRecognitionError:
             raise
         except Exception as e:
-            logger.exception("Failed to transcribe audio with Granite Speech")
-            msg = f"Failed to transcribe audio with Granite Speech: {e}"
-            raise SpeechRecognitionError(msg) from e
+            logger.exception("Granite Speech transcription failed")
+            granite_exc_detail = str(e)
+            granite_exc_msg = f"Granite Speech: {granite_exc_detail}"
+            raise SpeechRecognitionError(granite_exc_msg) from e
 
     @override
     async def get_supported_languages(self) -> list[str]:
-        logger.warning(
-            "Granite Speech 4.1-2b card lists EN/FR/DE/ES/PT/JA training focus; ru is experimental.",
-        )
-        return ["ru-RU", "ru"]
+        return sorted(set(_GRANITE_CARD_LANGUAGES))
