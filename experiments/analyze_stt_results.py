@@ -29,9 +29,9 @@ CATEGORY_RANGES: dict[str, tuple[int, int]] = {
 }
 
 CATEGORY_LABEL_RU: dict[str, str] = {
-    "real_1_10": "real 1–10",
-    "ii_11_20": "ии 11–20",
-    "solo_21_30": "соло 21–30",
+    "real_1_10": "real_dialog",
+    "ii_11_20": "tts_dialog",
+    "solo_21_30": "solo_dialog",
 }
 
 OVERALL_ONLY_METRICS: tuple[tuple[str, str, str], ...] = (
