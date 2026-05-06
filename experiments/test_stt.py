@@ -29,8 +29,8 @@ load_dotenv()
 # openrouter_audio, openrouter_audio_stt
 BACKEND = "whisper_hf"
 
-AUDIO_1 = Path(r"C:\Users\dragonpuffle\Documents\диплом\audio\Сценарий 0 цефалгия.mp3")
-AUDIO_2 = Path(r"C:\Users\dragonpuffle\Documents\диплом\audio\Сценарий 1 орви.mp3")
+AUDIO_1 = Path(r"experiments/audio/диалог-1-реал.mp3")
+AUDIO_2 = Path(r"experiments/audio/диалог-15-эмиль.mp3")
 
 LANG = "ru"
 
@@ -73,6 +73,11 @@ def build_stt_config() -> STTConfig:  # noqa: PLR0911
 
     # OpenAI Whisper large v3 family (HF card uses torch_dtype + pipeline ASR recipe).
     if BACKEND == "whisper_hf":
+        # openai/whisper-medium
+        # openai/whisper-large-v3-turbo
+        # openai/whisper-large-v3
+        # openai/whisper-base
+
         return STTConfig(
             provider="whisper_hf",
             model="openai/whisper-large-v3-turbo",

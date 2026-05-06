@@ -217,6 +217,7 @@ logs/
 # Application storage
 storage/
 models/
+experiments/audio/
 
 config.docker.toml
 
