@@ -18,6 +18,7 @@ from lobanov.adapters.services.nlp.gemma4_e2b_hf_clinical_extraction_service imp
 )
 from lobanov.adapters.services.nlp.llm_clinical_extraction_service import LLMClinicalExtractionService
 from lobanov.adapters.services.nlp.phi_hf_clinical_extraction_service import PhiHFClinicalExtractionService
+from lobanov.adapters.services.nlp.qwen3_hf_clinical_extraction_service import Qwen3HFClinicalExtractionService
 from lobanov.domain.entities.template_field import TemplateField
 from lobanov.infra.configs import NLPConfig
 from lobanov.protocols import ClinicalExtractionProtocol
@@ -28,8 +29,9 @@ load_dotenv()
 #   openrouter      – cloud via OpenRouter (requires OPENROUTER_API_KEY in env)
 #   phi_hf          – microsoft/Phi-3-mini-4k-instruct (Phi-4 via model= if needed);
 #   gemma4_e2b_hf   – google/gemma-4-E2B (ImageTextToText + processor; single device)
+#   qwen3_hf        – Qwen/Qwen3-0.6B (causal LM; chat template enable_thinking=False)
 
-BACKEND = "phi_hf"
+BACKEND = "qwen3_hf"
 
 TRANSCRIPTS_JSON = Path("experiments/dialog_transcripts.json")
 DIALOG_ID_COLD = "dialog_01"
@@ -159,11 +161,11 @@ def build_nlp_config() -> NLPConfig:
         )
 
     if BACKEND == "phi_hf":
-        # Phi-3-mini-4k-instruct
-        # Phi-4-mini-instruct
+        # microsoft/Phi-3-mini-4k-instruct
+        # microsoft/Phi-4-mini-instruct
         return NLPConfig(
             provider="phi_hf",
-            model="microsoft/Phi-4-mini-instruct",
+            model="microsoft/Phi-3-mini-4k-instruct",
             api_key="",
             **common_hf,
         )
@@ -172,6 +174,14 @@ def build_nlp_config() -> NLPConfig:
         return NLPConfig(
             provider="gemma4_e2b_hf",
             model="google/gemma-4-E2B",
+            api_key="",
+            **common_hf,
+        )
+
+    if BACKEND == "qwen3_hf":
+        return NLPConfig(
+            provider="qwen3_hf",
+            model="Qwen/Qwen3-0.6B",
             api_key="",
             **common_hf,
         )
@@ -188,6 +198,8 @@ def build_service(cfg: NLPConfig) -> ClinicalExtractionProtocol:
         return PhiHFClinicalExtractionService(cfg)
     if p in {"gemma4_e2b_hf", "gemma4_hf", "gemma4", "gemma_4_e2b"}:
         return Gemma4E2BHFClinicalExtractionService(cfg)
+    if p in {"qwen3_hf", "qwen3", "qwen3_06b"}:
+        return Qwen3HFClinicalExtractionService(cfg)
     msg = f"Unknown provider={cfg.provider!r}"
     raise ValueError(msg)
 

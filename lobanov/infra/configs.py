@@ -66,7 +66,7 @@ class NLPConfig(BaseModel):
     use_mock: bool = Field(description="Use mock extractor instead of LLM")
     provider: str = Field(
         default="openrouter",
-        description=("Clinical extraction provider: openrouter | phi_hf | gemma4_e2b_hf"),
+        description=("Clinical extraction provider: openrouter | phi_hf | gemma4_e2b_hf | qwen3_hf"),
     )
     model: str = Field(description="NLP model name or HF repo id")
     api_key: str = Field(default="", description="API key for remote OpenRouter services; empty for local HF models")

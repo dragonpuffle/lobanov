@@ -14,6 +14,9 @@ from .nlp.hf_causal_lm_clinical_extraction_base import (
 )
 from .nlp.llm_clinical_extraction_service import LLMClinicalExtractionService as LLMClinicalExtractionService
 from .nlp.phi_hf_clinical_extraction_service import PhiHFClinicalExtractionService as PhiHFClinicalExtractionService
+from .nlp.qwen3_hf_clinical_extraction_service import (
+    Qwen3HFClinicalExtractionService as Qwen3HFClinicalExtractionService,
+)
 from .password_manager_service import PasswordManagerService as PasswordManagerService
 from .stt.gigaam_stt_service import GigaAMSTTService as GigaAMSTTService
 from .stt.granite_speech_stt_service import GraniteSpeechSTTService as GraniteSpeechSTTService

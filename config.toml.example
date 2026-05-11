@@ -59,6 +59,7 @@ initial_prompt = "Медицинский диалог на русском язы
 #   openrouter          – cloud via OpenRouter (default; requires api_key)
 #   phi_hf              – microsoft/Phi-3-mini-4k-instruct local (~3.8B, 4k ctx); Phi-4-mini via model=; phi-2 for lighter
 #   gemma4_e2b_hf       – google/gemma-4-E2B (ImageTextToText + processor; single device; trust_remote_code)
+#   qwen3_hf            – Qwen/Qwen3-0.6B (and other Qwen3 dense ids via model=); enable_thinking=False in chat template
 [nlp]
 use_mock = false
 provider = "openrouter"
@@ -68,7 +69,7 @@ max_tokens = 2000
 temperature = 0.0
 use_structured_output = true
 use_response_healing = true
-# Fields below are used only for local HF providers (phi_hf / gemma4_e2b_hf)
+# Fields below are used only for local HF providers (phi_hf / gemma4_e2b_hf / qwen3_hf)
 device = "cuda"
 compute_type = "float16"
 revision = ""

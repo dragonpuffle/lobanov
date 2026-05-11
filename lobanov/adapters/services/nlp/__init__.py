@@ -6,3 +6,4 @@ from .hf_causal_lm_clinical_extraction_base import (
 )
 from .llm_clinical_extraction_service import LLMClinicalExtractionService as LLMClinicalExtractionService
 from .phi_hf_clinical_extraction_service import PhiHFClinicalExtractionService as PhiHFClinicalExtractionService
+from .qwen3_hf_clinical_extraction_service import Qwen3HFClinicalExtractionService as Qwen3HFClinicalExtractionService

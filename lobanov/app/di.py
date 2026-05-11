@@ -27,6 +27,7 @@ from lobanov.adapters.services import (
     OpenRouterAudioService,
     PasswordManagerService,
     PhiHFClinicalExtractionService,
+    Qwen3HFClinicalExtractionService,
     RussianWhisperHFSTTService,
     TextPreprocessingService,
     VibeVoiceHFSTTService,
@@ -92,6 +93,7 @@ _NLP_FACTORIES: Sequence[tuple[tuple[str, ...], Callable[[NLPConfig], ClinicalEx
         ("gemma4_e2b_hf", "gemma4_hf", "gemma4", "gemma_4_e2b"),
         Gemma4E2BHFClinicalExtractionService,
     ),
+    (("qwen3_hf", "qwen3", "qwen3_06b"), Qwen3HFClinicalExtractionService),
 )
 
 
