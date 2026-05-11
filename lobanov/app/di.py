@@ -17,6 +17,7 @@ from lobanov.adapters.repositories import (
     UserRepository,
 )
 from lobanov.adapters.services import (
+    Gemma4E2BHFClinicalExtractionService,
     GigaAMSTTService,
     GraniteSpeechSTTService,
     JWTTokenService,
@@ -25,6 +26,7 @@ from lobanov.adapters.services import (
     OpenRouterAudioSTTService,
     OpenRouterAudioService,
     PasswordManagerService,
+    PhiHFClinicalExtractionService,
     RussianWhisperHFSTTService,
     TextPreprocessingService,
     VibeVoiceHFSTTService,
@@ -82,6 +84,25 @@ from lobanov.usecases.medical_document.document_export_types import PdfExportTem
 from lobanov.usecases.transcript import PreprocessTranscript
 
 _LOBANOV_PACKAGE_ROOT = Path(lobanov.__file__).resolve().parent
+
+_NLP_FACTORIES: Sequence[tuple[tuple[str, ...], Callable[[NLPConfig], ClinicalExtractionProtocol]]] = (
+    (("openrouter", ""), LLMClinicalExtractionService),
+    (("phi_hf", "phi"), PhiHFClinicalExtractionService),
+    (
+        ("gemma4_e2b_hf", "gemma4_hf", "gemma4", "gemma_4_e2b"),
+        Gemma4E2BHFClinicalExtractionService,
+    ),
+)
+
+
+def _clinical_extraction_from_config(nlp_config: NLPConfig) -> ClinicalExtractionProtocol:
+    provider = nlp_config.provider.lower().strip()
+    for names, ctor in _NLP_FACTORIES:
+        if provider in names:
+            return ctor(nlp_config)
+    msg = f"Unknown nlp provider: {provider!r}"
+    raise ValueError(msg)
+
 
 _STT_FACTORIES: Sequence[tuple[tuple[str, ...], Callable[[STTConfig], SpeechRecognitionProtocol]]] = (
     (("whisper_hf", "openai_whisper_hf"), WhisperHFSTTService),
@@ -188,8 +209,8 @@ class ServiceProvider(dishka.Provider):
 
     @dishka.provide
     def provide_clinical_extraction_service(self, nlp_config: NLPConfig) -> ClinicalExtractionProtocol:
-        """сервис извлечения клинической информации на основе LLM"""
-        return LLMClinicalExtractionService(nlp_config)
+        """сервис извлечения клинической информации (openrouter или локальная HF-модель)"""
+        return _clinical_extraction_from_config(nlp_config)
 
     @dishka.provide
     def provide_jwt_token_service(self, jwt_config: JWTConfig) -> JWTTokenProtocol:

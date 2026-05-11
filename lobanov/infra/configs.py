@@ -64,12 +64,33 @@ class STTConfig(BaseModel):
 
 class NLPConfig(BaseModel):
     use_mock: bool = Field(description="Use mock extractor instead of LLM")
-    model: str = Field(description="NLP model name")
-    api_key: str = Field(description="API key for NLP service")
+    provider: str = Field(
+        default="openrouter",
+        description=("Clinical extraction provider: openrouter | phi_hf | gemma4_e2b_hf"),
+    )
+    model: str = Field(description="NLP model name or HF repo id")
+    api_key: str = Field(default="", description="API key for remote OpenRouter services; empty for local HF models")
     max_tokens: int = Field(description="Maximum tokens for NLP response")
     temperature: float = Field(description="Temperature for NLP generation")
     use_structured_output: bool = Field(description="Use JSON schema structured output mode")
     use_response_healing: bool = Field(description="Use response-healing plugin for malformed JSON recovery")
+    device: str = Field(
+        default="cuda",
+        description="Device for local HF models: cuda | cpu | cuda:0 | auto",
+    )
+    compute_type: str = Field(
+        default="float16",
+        description="Torch dtype for local HF models: float16 | bfloat16 | float32 | auto",
+    )
+    revision: str = Field(default="", description="HF model revision; empty = default main branch")
+    model_cache_dir: str = Field(
+        default="models/nlp",
+        description="Directory for downloaded local HF NLP models",
+    )
+    trust_remote_code: bool = Field(
+        default=True,
+        description="Pass trust_remote_code=True when loading HF models that require it",
+    )
 
 
 class TextPreprocessingConfig(BaseModel):

@@ -24,9 +24,9 @@ from bert_score import BERTScorer
 from jiwer import cer, wer
 from transformers import AutoModel, AutoTokenizer
 
-from lobanov.adapters.services.openrouter_audio_service import OpenRouterAudioService
-from lobanov.adapters.services.openrouter_audio_stt_service import OpenRouterAudioSTTService
-from lobanov.adapters.services.whisper_hf_stt_service import WhisperHFSTTService
+from lobanov.adapters.services.stt.openrouter_audio_service import OpenRouterAudioService
+from lobanov.adapters.services.stt.openrouter_audio_stt_service import OpenRouterAudioSTTService
+from lobanov.adapters.services.stt.whisper_hf_stt_service import WhisperHFSTTService
 from lobanov.infra.configs import STTConfig
 from lobanov.protocols import SpeechRecognitionError, SpeechRecognitionProtocol
 from lobanov.utils.logging import get_logger, setup_logging

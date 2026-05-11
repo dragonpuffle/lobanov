@@ -1,0 +1,8 @@
+from .gemma4_e2b_hf_clinical_extraction_service import (
+    Gemma4E2BHFClinicalExtractionService as Gemma4E2BHFClinicalExtractionService,
+)
+from .hf_causal_lm_clinical_extraction_base import (
+    HFCausalLMClinicalExtractionService as HFCausalLMClinicalExtractionService,
+)
+from .llm_clinical_extraction_service import LLMClinicalExtractionService as LLMClinicalExtractionService
+from .phi_hf_clinical_extraction_service import PhiHFClinicalExtractionService as PhiHFClinicalExtractionService

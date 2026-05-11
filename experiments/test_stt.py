@@ -14,13 +14,13 @@ from lobanov.compat.transformers_asr_no_torchcodec import disable_torchcodec_pro
 
 disable_torchcodec_probe_for_asr()
 
-from lobanov.adapters.services.gigaam_stt_service import GigaAMSTTService
-from lobanov.adapters.services.granite_speech_stt_service import GraniteSpeechSTTService
-from lobanov.adapters.services.openrouter_audio_service import OpenRouterAudioService
-from lobanov.adapters.services.openrouter_audio_stt_service import OpenRouterAudioSTTService
-from lobanov.adapters.services.russian_whisper_hf_stt_service import RussianWhisperHFSTTService
-from lobanov.adapters.services.vibevoice_asr_stt_service import VibeVoiceHFSTTService
-from lobanov.adapters.services.whisper_hf_stt_service import WhisperHFSTTService
+from lobanov.adapters.services.stt.gigaam_stt_service import GigaAMSTTService
+from lobanov.adapters.services.stt.granite_speech_stt_service import GraniteSpeechSTTService
+from lobanov.adapters.services.stt.openrouter_audio_service import OpenRouterAudioService
+from lobanov.adapters.services.stt.openrouter_audio_stt_service import OpenRouterAudioSTTService
+from lobanov.adapters.services.stt.russian_whisper_hf_stt_service import RussianWhisperHFSTTService
+from lobanov.adapters.services.stt.vibevoice_asr_stt_service import VibeVoiceHFSTTService
+from lobanov.adapters.services.stt.whisper_hf_stt_service import WhisperHFSTTService
 from lobanov.infra.configs import STTConfig
 from lobanov.protocols import SpeechRecognitionProtocol
 

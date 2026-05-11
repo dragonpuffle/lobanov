@@ -1,24 +1,25 @@
-from . import gigaam_stt_service as gigaam_stt_service
-from . import granite_speech_stt_service as granite_speech_stt_service
 from . import jwt_token_service as jwt_token_service
-from . import llm_clinical_extraction_service as llm_clinical_extraction_service
 from . import local_file_storage_service as local_file_storage_service
-from . import openrouter_audio_service as openrouter_audio_service
-from . import openrouter_audio_stt_service as openrouter_audio_stt_service
+from . import nlp as nlp
 from . import password_manager_service as password_manager_service
-from . import russian_whisper_hf_stt_service as russian_whisper_hf_stt_service
+from . import stt as stt
 from . import text_preprocessing_service as text_preprocessing_service
-from . import vibevoice_asr_stt_service as vibevoice_asr_stt_service
-from . import whisper_hf_stt_service as whisper_hf_stt_service
-from .gigaam_stt_service import GigaAMSTTService as GigaAMSTTService
-from .granite_speech_stt_service import GraniteSpeechSTTService as GraniteSpeechSTTService
 from .jwt_token_service import JWTTokenService as JWTTokenService
-from .llm_clinical_extraction_service import LLMClinicalExtractionService as LLMClinicalExtractionService
 from .local_file_storage_service import LocalFileStorageService as LocalFileStorageService
-from .openrouter_audio_service import OpenRouterAudioService as OpenRouterAudioService
-from .openrouter_audio_stt_service import OpenRouterAudioSTTService as OpenRouterAudioSTTService
+from .nlp.gemma4_e2b_hf_clinical_extraction_service import (
+    Gemma4E2BHFClinicalExtractionService as Gemma4E2BHFClinicalExtractionService,
+)
+from .nlp.hf_causal_lm_clinical_extraction_base import (
+    HFCausalLMClinicalExtractionService as HFCausalLMClinicalExtractionService,
+)
+from .nlp.llm_clinical_extraction_service import LLMClinicalExtractionService as LLMClinicalExtractionService
+from .nlp.phi_hf_clinical_extraction_service import PhiHFClinicalExtractionService as PhiHFClinicalExtractionService
 from .password_manager_service import PasswordManagerService as PasswordManagerService
-from .russian_whisper_hf_stt_service import RussianWhisperHFSTTService as RussianWhisperHFSTTService
+from .stt.gigaam_stt_service import GigaAMSTTService as GigaAMSTTService
+from .stt.granite_speech_stt_service import GraniteSpeechSTTService as GraniteSpeechSTTService
+from .stt.openrouter_audio_service import OpenRouterAudioService as OpenRouterAudioService
+from .stt.openrouter_audio_stt_service import OpenRouterAudioSTTService as OpenRouterAudioSTTService
+from .stt.russian_whisper_hf_stt_service import RussianWhisperHFSTTService as RussianWhisperHFSTTService
+from .stt.vibevoice_asr_stt_service import VibeVoiceHFSTTService as VibeVoiceHFSTTService
+from .stt.whisper_hf_stt_service import WhisperHFSTTService as WhisperHFSTTService
 from .text_preprocessing_service import TextPreprocessingService as TextPreprocessingService
-from .vibevoice_asr_stt_service import VibeVoiceHFSTTService as VibeVoiceHFSTTService
-from .whisper_hf_stt_service import WhisperHFSTTService as WhisperHFSTTService

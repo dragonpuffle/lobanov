@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, override
 
-from lobanov.adapters.services.whisper_hf_stt_service import WhisperHFSTTService
+from lobanov.adapters.services.stt.whisper_hf_stt_service import WhisperHFSTTService
 from lobanov.infra.configs import STTConfig
 from lobanov.protocols import SpeechRecognitionError
 from lobanov.utils.logging import get_logger
