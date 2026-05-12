@@ -1,4 +1,4 @@
-# ruff: noqa: E402, T201
+# ruff: noqa: E402
 
 from __future__ import annotations
 
@@ -60,7 +60,6 @@ PROVIDER_MODEL_CATALOGUE: Final[dict[str, list[str]]] = {
     "openrouter_audio": [
         "openai/gpt-audio",
         "openai/gpt-audio-mini",
-        "openai/gpt-4o-audio-preview",
     ],
 }
 
@@ -336,7 +335,8 @@ def preload_metric_models() -> None:
     logger.info("Предзагрузка embedding MiniLM …")
     _get_embedder()
 
-    logger.info("Модели для метрик готовы; кэш: {}", root.resolve())
+    root_resolved = root.resolve()
+    logger.info("Модели для метрик готовы; кэш: {}", root_resolved)
 
 
 def compute_metrics(reference: str, hypothesis: str) -> dict[str, float]:
@@ -429,7 +429,7 @@ class BenchmarkAbortedError(Exception):
 
 
 def repo_root() -> Path:
-    return Path(__file__).resolve().parents[1]
+    return Path(__file__).resolve().parents[2]
 
 
 def metrics_hf_cache_root() -> Path:
@@ -481,11 +481,7 @@ async def warmup_run(svc: SpeechRecognitionProtocol, first_dialog: dict[str, Any
     audio_rel = str(first_dialog.get("audio_path", ""))
     abs_path = (repo_root() / audio_rel).resolve()
     if not abs_path.is_file():
-        logger.warning(
-            "Разогрев: пропуск — нет файла {}, dialog_id={}",
-            abs_path,
-            did,
-        )
+        logger.warning("Разогрев: пропуск — нет файла {}, dialog_id={}", abs_path, did)
         return
     logger.info(
         "Разогрев STT: одна транскрипция без записи в результаты, dialog_id={}, файл={}",
@@ -539,13 +535,7 @@ async def run_single(  # noqa: PLR0913
 
     if not abs_path.is_file():
         err = f"Audio file not found: {abs_path}"
-        logger.error(
-            "Диалог {}/{} [{}]: нет аудио '{}'",
-            step_index,
-            step_total,
-            dialog_id,
-            abs_path,
-        )
+        logger.error("Диалог {}/{} [{}]: нет аудио '{}'", step_index, step_total, dialog_id, abs_path)
         base_record["error"] = err
         append_result_record(results_path, base_record)
         return False, err
@@ -645,11 +635,7 @@ async def run_all(  # noqa: PLR0913
                 logger.warning("Причина: {}", err)
             if total_errors >= MAX_ERRORS:
                 msg = f"Stopped after {MAX_ERRORS} failed dialogs (accumulated)"
-                logger.error(
-                    "Остановка: накопилось {} неудачных диалогов. {}",
-                    MAX_ERRORS,
-                    msg,
-                )
+                logger.error("Остановка: накопилось {} неудачных диалогов. {}", MAX_ERRORS, msg)
                 raise BenchmarkAbortedError(msg)
 
     logger.info("Основной цикл завершён: успехов={}, неудач={}", ok_count, fail_count)
@@ -660,23 +646,21 @@ def _output_path_for_run(provider: str, model: str) -> Path:
     slug_model = model.replace("/", "_").replace(" ", "_")
     slug_provider = provider.replace("/", "_").replace(" ", "_")
     ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-    return repo_root() / "experiments" / "results" / f"bench_{slug_provider}_{slug_model}_{ts}.json"
+    out_dir = repo_root() / "experiments" / "results" / "stt"
+    return out_dir / f"bench_{slug_provider}_{slug_model}_{ts}.json"
 
 
 async def _main() -> None:
     logger.info("Старт bench_stt: провайдер={}, модель={}", PROVIDER, MODEL)
 
     if PROVIDER not in PROVIDER_MODEL_CATALOGUE:
-        logger.error("Неизвестный провайдер: {!r}", PROVIDER)
-        print(f"Unknown PROVIDER={PROVIDER!r}. Valid: {list(PROVIDER_MODEL_CATALOGUE)}", file=sys.stderr)
+        logger.error("Неизвестный провайдер: {}. Доступные: {}", PROVIDER, list(PROVIDER_MODEL_CATALOGUE))
         sys.exit(1)
 
     exp_id = uuid4()
     results_path = _output_path_for_run(PROVIDER, MODEL)
     logger.info("experiment_id={}", exp_id)
     logger.info("Файл результатов: {}", results_path)
-    print(f"Experiment ID: {exp_id}")
-    print(f"Results file: {results_path}")
 
     dialogs_path = repo_root() / "experiments" / "dialog_transcripts.json"
     logger.info("Загрузка каталога диалогов: {}", dialogs_path)
@@ -687,7 +671,6 @@ async def _main() -> None:
     cfg = build_stt_config(PROVIDER, MODEL)
     if cfg.provider.startswith("openrouter") and not cfg.api_key.strip():
         logger.error("OPENROUTER_API_KEY пуст или не задан")
-        print("OPENROUTER_API_KEY is empty or missing.", file=sys.stderr)
         sys.exit(1)
 
     logger.info("Сервис STT: {}", cfg.provider)
@@ -704,11 +687,9 @@ async def _main() -> None:
         ok_n, fail_n = await run_all(dialogs, svc, PROVIDER, MODEL, exp_id, results_path)
     except BenchmarkAbortedError as e:
         logger.warning("Бенчмарк прерван: {}", e)
-        print(f"Benchmark aborted: {e}", file=sys.stderr)
         sys.exit(2)
 
     logger.info("Бенчмарк завершён: успехов={}, неудач={}", ok_n, fail_n)
-    print(f"Done. Successes: {ok_n}, failures: {fail_n}")
 
 
 def main() -> None:
