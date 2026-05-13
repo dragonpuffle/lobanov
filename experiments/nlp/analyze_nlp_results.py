@@ -89,6 +89,50 @@ def _nanmean_or_nan(values: list[float]) -> float:
     return float(np.nanmean(arr))
 
 
+def _resolve_stt_result_path(stt_result_file: str | None) -> Path | None:
+    if not stt_result_file:
+        return None
+    p = Path(str(stt_result_file).strip())
+    if not p.parts:
+        return None
+    return p if p.is_absolute() else (repo_root() / p).resolve()
+
+
+def _mean_stt_elapsed_seconds_from_json(
+    stt_result_file: str | None,
+    cache: dict[str, float],
+) -> float:
+    """Среднее elapsed_seconds по успешным записям STT-бенча (тот же файл, что и stt_result_file в bench_nlp)."""
+    path = _resolve_stt_result_path(stt_result_file)
+    if path is None:
+        return float("nan")
+    key = str(path)
+    if key in cache:
+        return cache[key]
+    if not path.is_file():
+        cache[key] = float("nan")
+        return float("nan")
+    raw = path.read_text(encoding="utf-8").strip()
+    if not raw:
+        cache[key] = float("nan")
+        return float("nan")
+    data = json.loads(raw)
+    if not isinstance(data, list):
+        cache[key] = float("nan")
+        return float("nan")
+    elapsed: list[float] = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        err = item.get("error")
+        if err is not None and str(err) != "":
+            continue
+        elapsed.append(_as_float_or_nan(item.get("elapsed_seconds")))
+    mean_el = _nanmean_or_nan(elapsed)
+    cache[key] = mean_el
+    return mean_el
+
+
 def load_records(path: Path) -> list[dict[str, Any]]:
     raw = path.read_text(encoding="utf-8").strip()
     if not raw:
@@ -145,6 +189,7 @@ def build_summary(raw: pd.DataFrame) -> pd.DataFrame:
 
     group_cols = _group_keys(raw)
     rows: list[dict[str, Any]] = []
+    stt_elapsed_cache: dict[str, float] = {}
 
     for key_vals, group in raw.groupby(group_cols, dropna=False, sort=True):
         key_map = dict(zip(group_cols, key_vals, strict=True))
@@ -160,6 +205,15 @@ def build_summary(raw: pd.DataFrame) -> pd.DataFrame:
             if "elapsed_seconds" in success.columns and len(success) > 0
             else float("nan"),
         }
+
+        ts = str(row.get("transcript_source") or "").strip().lower()
+        stt_file = row.get("stt_result_file")
+        stt_file_s = str(stt_file).strip() if stt_file is not None and str(stt_file).strip() else None
+        if ts == "stt_result" and stt_file_s:
+            mean_stt = _mean_stt_elapsed_seconds_from_json(stt_file_s, stt_elapsed_cache)
+        else:
+            mean_stt = float("nan")
+        row["mean_stt_elapsed_seconds"] = mean_stt
 
         for dotted_key, out_col in SUMMARY_METRICS:
             values = [
@@ -190,6 +244,7 @@ def build_summary(raw: pd.DataFrame) -> pd.DataFrame:
         "n_success",
         "n_error",
         "mean_elapsed_seconds",
+        "mean_stt_elapsed_seconds",
         "ff_precision",
         "ff_recall",
         "ff_f1",
