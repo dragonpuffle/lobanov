@@ -32,19 +32,16 @@ class StorageConfig(BaseModel):
 
 class STTConfig(BaseModel):
     provider: str = Field(
-        description=(
-            "Speech-to-text provider: whisper_hf, russian_whisper_hf, granite_speech_hf, "
-            "gigaam_hf, vibevoice_hf, openrouter_audio, openrouter_audio_stt"
-        ),
+        description="Speech-to-text provider: whisper_hf, openrouter_audio, openrouter_audio_stt",
     )
     model: str = Field(description="Speech-to-text model name or OpenRouter model id")
     api_key: str = Field(
         default="",
-        description="API key for remote OpenRouter services; empty for local whisper/gigaam",
+        description="API key for remote OpenRouter services; empty for local whisper",
     )
     device: str = Field(description="Device to run model on (cpu/cuda)")
     language: str = Field(description="Default language for speech recognition (e.g. ru)")
-    revision: str = Field(description="Model revision for Hugging Face (GigaAM); use empty string for Whisper")
+    revision: str = Field(description="Model revision for Hugging Face; use empty string for default branch")
     compute_type: str = Field(description="Model compute type (e.g. int8, float16, float32)")
     beam_size: int = Field(description="Beam size for decoder")
     vad_filter: bool = Field(description="Enable VAD filtering")
@@ -66,7 +63,7 @@ class NLPConfig(BaseModel):
     use_mock: bool = Field(description="Use mock extractor instead of LLM")
     provider: str = Field(
         default="openrouter",
-        description=("Clinical extraction provider: openrouter | phi_hf | gemma4_e2b_hf | qwen3_hf"),
+        description="Clinical extraction provider: openrouter | phi_hf | qwen3_hf",
     )
     model: str = Field(description="NLP model name or HF repo id")
     api_key: str = Field(default="", description="API key for remote OpenRouter services; empty for local HF models")

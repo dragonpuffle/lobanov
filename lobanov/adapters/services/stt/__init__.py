@@ -1,7 +1,3 @@
-from .gigaam_stt_service import GigaAMSTTService as GigaAMSTTService
-from .granite_speech_stt_service import GraniteSpeechSTTService as GraniteSpeechSTTService
 from .openrouter_audio_service import OpenRouterAudioService as OpenRouterAudioService
 from .openrouter_audio_stt_service import OpenRouterAudioSTTService as OpenRouterAudioSTTService
-from .russian_whisper_hf_stt_service import RussianWhisperHFSTTService as RussianWhisperHFSTTService
-from .vibevoice_asr_stt_service import VibeVoiceHFSTTService as VibeVoiceHFSTTService
 from .whisper_hf_stt_service import WhisperHFSTTService as WhisperHFSTTService

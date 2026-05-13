@@ -17,9 +17,6 @@ from lobanov.adapters.repositories import (
     UserRepository,
 )
 from lobanov.adapters.services import (
-    Gemma4E2BHFClinicalExtractionService,
-    GigaAMSTTService,
-    GraniteSpeechSTTService,
     JWTTokenService,
     LLMClinicalExtractionService,
     LocalFileStorageService,
@@ -28,9 +25,7 @@ from lobanov.adapters.services import (
     PasswordManagerService,
     PhiHFClinicalExtractionService,
     Qwen3HFClinicalExtractionService,
-    RussianWhisperHFSTTService,
     TextPreprocessingService,
-    VibeVoiceHFSTTService,
     WhisperHFSTTService,
 )
 from lobanov.infra.config import GlobalConfig
@@ -89,10 +84,6 @@ _LOBANOV_PACKAGE_ROOT = Path(lobanov.__file__).resolve().parent
 _NLP_FACTORIES: Sequence[tuple[tuple[str, ...], Callable[[NLPConfig], ClinicalExtractionProtocol]]] = (
     (("openrouter", ""), LLMClinicalExtractionService),
     (("phi_hf", "phi"), PhiHFClinicalExtractionService),
-    (
-        ("gemma4_e2b_hf", "gemma4_hf", "gemma4", "gemma_4_e2b"),
-        Gemma4E2BHFClinicalExtractionService,
-    ),
     (("qwen3_hf", "qwen3", "qwen3_06b"), Qwen3HFClinicalExtractionService),
 )
 
@@ -108,10 +99,6 @@ def _clinical_extraction_from_config(nlp_config: NLPConfig) -> ClinicalExtractio
 
 _STT_FACTORIES: Sequence[tuple[tuple[str, ...], Callable[[STTConfig], SpeechRecognitionProtocol]]] = (
     (("whisper_hf", "openai_whisper_hf"), WhisperHFSTTService),
-    (("russian_whisper_hf", "russian_whisper"), RussianWhisperHFSTTService),
-    (("granite_speech_hf", "granite_speech"), GraniteSpeechSTTService),
-    (("gigaam_hf", "gigaam"), GigaAMSTTService),
-    (("vibevoice_hf", "vibevoice"), VibeVoiceHFSTTService),
     (("openrouter_audio",), OpenRouterAudioService),
     (("openrouter_audio_stt", "openrouter_stt"), OpenRouterAudioSTTService),
 )

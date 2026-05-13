@@ -6,9 +6,6 @@ from . import stt as stt
 from . import text_preprocessing_service as text_preprocessing_service
 from .jwt_token_service import JWTTokenService as JWTTokenService
 from .local_file_storage_service import LocalFileStorageService as LocalFileStorageService
-from .nlp.gemma4_e2b_hf_clinical_extraction_service import (
-    Gemma4E2BHFClinicalExtractionService as Gemma4E2BHFClinicalExtractionService,
-)
 from .nlp.hf_causal_lm_clinical_extraction_base import (
     HFCausalLMClinicalExtractionService as HFCausalLMClinicalExtractionService,
 )
@@ -18,11 +15,7 @@ from .nlp.qwen3_hf_clinical_extraction_service import (
     Qwen3HFClinicalExtractionService as Qwen3HFClinicalExtractionService,
 )
 from .password_manager_service import PasswordManagerService as PasswordManagerService
-from .stt.gigaam_stt_service import GigaAMSTTService as GigaAMSTTService
-from .stt.granite_speech_stt_service import GraniteSpeechSTTService as GraniteSpeechSTTService
 from .stt.openrouter_audio_service import OpenRouterAudioService as OpenRouterAudioService
 from .stt.openrouter_audio_stt_service import OpenRouterAudioSTTService as OpenRouterAudioSTTService
-from .stt.russian_whisper_hf_stt_service import RussianWhisperHFSTTService as RussianWhisperHFSTTService
-from .stt.vibevoice_asr_stt_service import VibeVoiceHFSTTService as VibeVoiceHFSTTService
 from .stt.whisper_hf_stt_service import WhisperHFSTTService as WhisperHFSTTService
 from .text_preprocessing_service import TextPreprocessingService as TextPreprocessingService
