@@ -31,15 +31,17 @@ class StorageConfig(BaseModel):
 
 
 class STTConfig(BaseModel):
-    provider: str = Field(description="Speech-to-text provider (whisper/gigaam/openrouter)")
-    model: str = Field(description="Speech-to-text model name (OpenRouter model id when provider=openrouter)")
+    provider: str = Field(
+        description="Speech-to-text provider: whisper_hf, openrouter_audio, openrouter_audio_stt",
+    )
+    model: str = Field(description="Speech-to-text model name or OpenRouter model id")
     api_key: str = Field(
         default="",
-        description="API key for remote STT (OpenRouter); empty for local whisper/gigaam",
+        description="API key for remote OpenRouter services; empty for local whisper",
     )
     device: str = Field(description="Device to run model on (cpu/cuda)")
     language: str = Field(description="Default language for speech recognition (e.g. ru)")
-    revision: str = Field(description="Model revision for Hugging Face (GigaAM); use empty string for Whisper")
+    revision: str = Field(description="Model revision for Hugging Face; use empty string for default branch")
     compute_type: str = Field(description="Model compute type (e.g. int8, float16, float32)")
     beam_size: int = Field(description="Beam size for decoder")
     vad_filter: bool = Field(description="Enable VAD filtering")
@@ -51,16 +53,41 @@ class STTConfig(BaseModel):
     )
     condition_on_previous_text: bool = Field(description="Condition segments on previous text")
     initial_prompt: str = Field(description="Initial prompt for domain adaptation; empty string to disable")
+    model_cache_dir: str = Field(
+        default="models/stt",
+        description="Directory for downloaded local STT models",
+    )
 
 
 class NLPConfig(BaseModel):
     use_mock: bool = Field(description="Use mock extractor instead of LLM")
-    model: str = Field(description="NLP model name")
-    api_key: str = Field(description="API key for NLP service")
+    provider: str = Field(
+        default="openrouter",
+        description="Clinical extraction provider: openrouter | phi_hf | qwen3_hf",
+    )
+    model: str = Field(description="NLP model name or HF repo id")
+    api_key: str = Field(default="", description="API key for remote OpenRouter services; empty for local HF models")
     max_tokens: int = Field(description="Maximum tokens for NLP response")
     temperature: float = Field(description="Temperature for NLP generation")
     use_structured_output: bool = Field(description="Use JSON schema structured output mode")
     use_response_healing: bool = Field(description="Use response-healing plugin for malformed JSON recovery")
+    device: str = Field(
+        default="cuda",
+        description="Device for local HF models: cuda | cpu | cuda:0 | auto",
+    )
+    compute_type: str = Field(
+        default="float16",
+        description="Torch dtype for local HF models: float16 | bfloat16 | float32 | auto",
+    )
+    revision: str = Field(default="", description="HF model revision; empty = default main branch")
+    model_cache_dir: str = Field(
+        default="models/nlp",
+        description="Directory for downloaded local HF NLP models",
+    )
+    trust_remote_code: bool = Field(
+        default=True,
+        description="Pass trust_remote_code=True when loading HF models that require it",
+    )
 
 
 class TextPreprocessingConfig(BaseModel):

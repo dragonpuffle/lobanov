@@ -10,14 +10,14 @@ import httpx
 
 from lobanov.domain.entities.transcript import Transcript, TranscriptLanguage
 from lobanov.infra.configs import STTConfig
-from lobanov.protocols import SpeechRecognitionProtocol
+from lobanov.protocols import SpeechRecognitionError, SpeechRecognitionProtocol
 from lobanov.utils.audio_to_mp3 import AudioToMp3Error, convert_bytes_to_mp3
 from lobanov.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 _OPENROUTER_CHAT_URL: Final[str] = "https://openrouter.ai/api/v1/chat/completions"
-# Upstream (e.g. OpenAI via OpenRouter) often accepts only wav/mp3 in input_audio.format; see API error on m4a.
+
 _OPENROUTER_NATIVE_FORMATS: Final[frozenset[str]] = frozenset({"wav", "mp3"})
 
 _SUFFIX_TO_AUDIO_FORMAT: Final[dict[str, str]] = {
@@ -31,10 +31,6 @@ _SUFFIX_TO_AUDIO_FORMAT: Final[dict[str, str]] = {
     "aif": "aiff",
     "opus": "ogg",
 }
-
-
-class SpeechRecognitionError(Exception):
-    pass
 
 
 def _message_content_to_text(content: object) -> str:
@@ -63,7 +59,7 @@ def _strip_code_fences(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-class OpenRouterSTTService(SpeechRecognitionProtocol):
+class OpenRouterAudioService(SpeechRecognitionProtocol):
     """Speech-to-text via OpenRouter chat completions with input_audio (base64)."""
 
     def __init__(self, stt_config: STTConfig):
@@ -74,7 +70,7 @@ class OpenRouterSTTService(SpeechRecognitionProtocol):
         fmt = _SUFFIX_TO_AUDIO_FORMAT.get(suffix)
         if fmt is None:
             err_msg = (
-                f"Unsupported audio extension for OpenRouter STT: .{suffix or '(none)'}; "
+                f"Unsupported audio extension for OpenRouter audio chat: .{suffix or '(none)'}; "
                 f"use one of: {', '.join(sorted(_SUFFIX_TO_AUDIO_FORMAT))}"
             )
             raise SpeechRecognitionError(err_msg)
@@ -99,7 +95,7 @@ class OpenRouterSTTService(SpeechRecognitionProtocol):
             raise SpeechRecognitionError(err_msg)
 
         if not self._stt.api_key.strip():
-            raise SpeechRecognitionError("OpenRouter STT requires a non-empty api_key in [stt] config")
+            raise SpeechRecognitionError("OpenRouter audio service requires a non-empty api_key in [stt] config")
 
         source_format = self._audio_format_for_path(file_path)
 
@@ -119,7 +115,7 @@ class OpenRouterSTTService(SpeechRecognitionProtocol):
             headers = {
                 "Authorization": f"Bearer {self._stt.api_key.strip()}",
                 "Content-Type": "application/json",
-                "X-Title": "Lobanov Clinical Documentation STT",
+                "X-OpenRouter-Title": "Lobanov Clinical Documentation STT",
             }
 
             payload: dict[str, object] = {
@@ -128,7 +124,10 @@ class OpenRouterSTTService(SpeechRecognitionProtocol):
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": self._transcription_instruction(language)},
+                            {
+                                "type": "text",
+                                "text": self._transcription_instruction(language),
+                            },
                             {
                                 "type": "input_audio",
                                 "input_audio": {
@@ -147,17 +146,19 @@ class OpenRouterSTTService(SpeechRecognitionProtocol):
                 response = await client.post(_OPENROUTER_CHAT_URL, headers=headers, json=payload)
                 if response.is_error:
                     body = (response.text or "")[:8000]
-                    log_msg = f"OpenRouter STT {response.status_code}: {body}"
+                    log_msg = f"OpenRouter audio chat {response.status_code}: {body}"
                     logger.error("{}", log_msg)  # noqa: PLE1205
                     err_detail = body or response.reason_phrase
-                    openrouter_err = f"OpenRouter STT rejected the request ({response.status_code}): {err_detail}"
+                    openrouter_err = (
+                        f"OpenRouter audio chat rejected the request ({response.status_code}): {err_detail}"
+                    )
                     raise SpeechRecognitionError(openrouter_err)
                 result = response.json()
 
             raw_content = result["choices"][0]["message"]["content"]
             text_content = _message_content_to_text(raw_content)
             if not text_content.strip():
-                err_msg = "OpenRouter STT returned empty transcript"
+                err_msg = "OpenRouter audio chat returned empty transcript"
                 raise SpeechRecognitionError(err_msg)
 
             full_text = " ".join(_strip_code_fences(text_content).split()).strip()
@@ -175,8 +176,8 @@ class OpenRouterSTTService(SpeechRecognitionProtocol):
         except SpeechRecognitionError:
             raise
         except Exception as e:
-            logger.exception("Failed to transcribe audio via OpenRouter")
-            err_msg = f"Failed to transcribe audio via OpenRouter: {e}"
+            logger.exception("Failed to transcribe audio via OpenRouter audio chat")
+            err_msg = f"Failed to transcribe audio via OpenRouter audio chat: {e}"
             raise SpeechRecognitionError(err_msg) from e
 
     @override

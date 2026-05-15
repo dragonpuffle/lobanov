@@ -1,3 +1,4 @@
+import os
 from collections.abc import Callable
 from typing import ClassVar, override
 
@@ -36,7 +37,9 @@ class GlobalConfig(BaseSettings):
 
     @classmethod
     def load(cls) -> "GlobalConfig":
-        return GlobalConfig()  # pyright: ignore[reportCallIssue]  # type: ignore[missing-argument]
+        cfg = GlobalConfig()  # pyright: ignore[reportCallIssue]  # type: ignore[missing-argument]
+        _sync_hf_hub_token_from_config(cfg)
+        return cfg
 
     @classmethod
     def subconfigs(cls) -> list[Callable[["GlobalConfig"], object]]:
@@ -94,3 +97,13 @@ class GlobalConfig(BaseSettings):
             TomlConfigSettingsSource(settings_cls),  # loaded from toml config
             file_secret_settings,  # other file sources
         )
+
+
+def _sync_hf_hub_token_from_config(cfg: GlobalConfig) -> None:
+    """Expose ``huggingface.token`` to libraries that only read ``HF_TOKEN`` / ``HUGGING_FACE_HUB_TOKEN``."""
+    tok = (cfg.huggingface.token or "").strip()
+    if not tok:
+        return
+    if os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN"):
+        return
+    os.environ["HF_TOKEN"] = tok

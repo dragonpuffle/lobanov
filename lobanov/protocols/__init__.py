@@ -11,5 +11,6 @@ from .services import ClinicalExtractionProtocol as ClinicalExtractionProtocol
 from .services import FileStorageProtocol as FileStorageProtocol
 from .services import JWTTokenProtocol as JWTTokenProtocol
 from .services import PasswordManagerProtocol as PasswordManagerProtocol
+from .services import SpeechRecognitionError as SpeechRecognitionError
 from .services import SpeechRecognitionProtocol as SpeechRecognitionProtocol
 from .services import TextProcessingProtocol as TextProcessingProtocol

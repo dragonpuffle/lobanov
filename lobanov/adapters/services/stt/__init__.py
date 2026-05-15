@@ -1,0 +1,3 @@
+from .openrouter_audio_service import OpenRouterAudioService as OpenRouterAudioService
+from .openrouter_audio_stt_service import OpenRouterAudioSTTService as OpenRouterAudioSTTService
+from .whisper_hf_stt_service import WhisperHFSTTService as WhisperHFSTTService

@@ -1,3 +1,4 @@
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import final
 from uuid import UUID
@@ -16,14 +17,16 @@ from lobanov.adapters.repositories import (
     UserRepository,
 )
 from lobanov.adapters.services import (
-    GigaAMSTTService,
     JWTTokenService,
     LLMClinicalExtractionService,
     LocalFileStorageService,
-    OpenRouterSTTService,
+    OpenRouterAudioSTTService,
+    OpenRouterAudioService,
     PasswordManagerService,
+    PhiHFClinicalExtractionService,
+    Qwen3HFClinicalExtractionService,
     TextPreprocessingService,
-    WhisperSTTService,
+    WhisperHFSTTService,
 )
 from lobanov.infra.config import GlobalConfig
 from lobanov.infra.configs import (
@@ -77,6 +80,37 @@ from lobanov.usecases.medical_document.document_export_types import PdfExportTem
 from lobanov.usecases.transcript import PreprocessTranscript
 
 _LOBANOV_PACKAGE_ROOT = Path(lobanov.__file__).resolve().parent
+
+_NLP_FACTORIES: Sequence[tuple[tuple[str, ...], Callable[[NLPConfig], ClinicalExtractionProtocol]]] = (
+    (("openrouter", ""), LLMClinicalExtractionService),
+    (("phi_hf", "phi"), PhiHFClinicalExtractionService),
+    (("qwen3_hf", "qwen3", "qwen3_06b"), Qwen3HFClinicalExtractionService),
+)
+
+
+def _clinical_extraction_from_config(nlp_config: NLPConfig) -> ClinicalExtractionProtocol:
+    provider = nlp_config.provider.lower().strip()
+    for names, ctor in _NLP_FACTORIES:
+        if provider in names:
+            return ctor(nlp_config)
+    msg = f"Unknown nlp provider: {provider!r}"
+    raise ValueError(msg)
+
+
+_STT_FACTORIES: Sequence[tuple[tuple[str, ...], Callable[[STTConfig], SpeechRecognitionProtocol]]] = (
+    (("whisper_hf", "openai_whisper_hf"), WhisperHFSTTService),
+    (("openrouter_audio",), OpenRouterAudioService),
+    (("openrouter_audio_stt", "openrouter_stt"), OpenRouterAudioSTTService),
+)
+
+
+def _speech_recognition_from_config(stt_config: STTConfig) -> SpeechRecognitionProtocol:
+    provider = stt_config.provider.lower().strip()
+    for names, ctor in _STT_FACTORIES:
+        if provider in names:
+            return ctor(stt_config)
+    msg = f"Unknown stt provider: {provider!r}"
+    raise ValueError(msg)
 
 
 @final
@@ -154,13 +188,8 @@ class ServiceProvider(dishka.Provider):
 
     @dishka.provide
     def provide_speech_recognition_service(self, stt_config: STTConfig) -> SpeechRecognitionProtocol:
-        """сервис распознавания речи на основе Whisper"""
-        provider = stt_config.provider.lower().strip()
-        if provider == "gigaam":
-            return GigaAMSTTService(stt_config)
-        if provider == "openrouter":
-            return OpenRouterSTTService(stt_config)
-        return WhisperSTTService(stt_config)
+        """сервис распознавания речи"""
+        return _speech_recognition_from_config(stt_config)
 
     @dishka.provide
     def provide_text_preprocessing_service(self, text_cfg: TextPreprocessingConfig) -> TextProcessingProtocol:
@@ -169,8 +198,8 @@ class ServiceProvider(dishka.Provider):
 
     @dishka.provide
     def provide_clinical_extraction_service(self, nlp_config: NLPConfig) -> ClinicalExtractionProtocol:
-        """сервис извлечения клинической информации на основе LLM"""
-        return LLMClinicalExtractionService(nlp_config)
+        """сервис извлечения клинической информации (openrouter или локальная HF-модель)"""
+        return _clinical_extraction_from_config(nlp_config)
 
     @dishka.provide
     def provide_jwt_token_service(self, jwt_config: JWTConfig) -> JWTTokenProtocol:

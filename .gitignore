@@ -216,7 +216,17 @@ logs/
 
 # Application storage
 storage/
+models/
+experiments/audio/
+
+# JSON в каталоге экспериментов (результаты бенчей, дампы и т.п.)
+experiments/**/*.json
+!experiments/dialog_transcripts.json
+!experiments/dialog_clinical_facts_01_30.json
 
 config.docker.toml
 
 tools/
+
+диплом.docx
+

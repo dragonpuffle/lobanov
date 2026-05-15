@@ -33,17 +33,20 @@ allowed_audio_formats = ["mp3", "wav", "m4a", "ogg", "flac"]
 document_path = "./storage/documents"
 max_document_size = 10485760
 
-# GPU: device = "cuda", compute_type = "float16" ()
-# CPU: device = "cpu", compute_type = "int8"
-# OpenRouter: provider = "openrouter", set model to an audio-input model id, set api_key (or LOBANOV_STT__API_KEY)
+# GPU: device = "cuda", compute_type = "float16"
+# Local HF STT provider: whisper_hf
+# Whisper large v3 turbo: model = "openai/whisper-large-v3-turbo" | large v3: "openai/whisper-large-v3"
+# OpenRouter audio chat: provider = "openrouter_audio", set model to an audio-input chat model id, set api_key
+# OpenRouter STT: provider = "openrouter_audio_stt", set model to an audio transcription model id, set api_key
 [stt]
-provider = "whisper"
-model = "large-v3"
+provider = "whisper_hf"
+model = "openai/whisper-large-v3-turbo"
 api_key = ""
 device = "cuda"
 revision = ""
 language = "ru"
 compute_type = "float16"
+model_cache_dir = "models/stt"
 beam_size = 5
 vad_filter = true
 word_timestamps = true
@@ -52,14 +55,25 @@ no_speech_threshold = 0.6
 condition_on_previous_text = true
 initial_prompt = "Медицинский диалог на русском языке. Сохраняй точные названия лекарств, диагнозов, чисел, дат и фамилий."
 
+# provider options:
+#   openrouter          – cloud via OpenRouter (default; requires api_key)
+#   phi_hf              – microsoft/Phi-3-mini-4k-instruct local (~3.8B, 4k ctx); Phi-4-mini via model=; phi-2 for lighter
+#   qwen3_hf            – Qwen/Qwen3-0.6B (and other Qwen3 dense ids via model=); enable_thinking=False in chat template
 [nlp]
 use_mock = false
+provider = "openrouter"
 model = "gpt-3.5-turbo"
 api_key = "your-openai-api-key"
 max_tokens = 2000
 temperature = 0.0
 use_structured_output = true
 use_response_healing = true
+# Fields below are used only for local HF providers (phi_hf / qwen3_hf)
+device = "cuda"
+compute_type = "float16"
+revision = ""
+model_cache_dir = "models/nlp"
+trust_remote_code = true
 
 [text_preprocessing]
 lowercase = true
@@ -72,3 +86,7 @@ result_backend = "redis://localhost:6379/0"
 [rate_limit]
 per_minute = 60
 per_hour = 1000
+
+# Optional Hugging Face Hub token (Read is enough for public models). Synced to HF_TOKEN on startup when unset.
+[huggingface]
+token = ""

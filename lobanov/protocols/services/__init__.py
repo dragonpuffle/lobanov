@@ -8,5 +8,5 @@ from .clinical_extraction_protocol import ClinicalExtractionProtocol
 from .file_storage_protocol import FileStorageProtocol
 from .jwt_token_protocol import JWTTokenProtocol
 from .password_manager_protocol import PasswordManagerProtocol
-from .speech_recognition_protocol import SpeechRecognitionProtocol
+from .speech_recognition_protocol import SpeechRecognitionError, SpeechRecognitionProtocol
 from .text_processing_protocol import TextProcessingProtocol

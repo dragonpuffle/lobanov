@@ -19,11 +19,11 @@ from .repositories import MedicalDocumentRepository as MedicalDocumentRepository
 from .repositories import TemplateRepository as TemplateRepository
 from .repositories import TranscriptRepository as TranscriptRepository
 from .repositories import UserRepository as UserRepository
-from .services import GigaAMSTTService as GigaAMSTTService
 from .services import JWTTokenService as JWTTokenService
 from .services import LLMClinicalExtractionService as LLMClinicalExtractionService
 from .services import LocalFileStorageService as LocalFileStorageService
-from .services import OpenRouterSTTService as OpenRouterSTTService
+from .services import OpenRouterAudioSTTService as OpenRouterAudioSTTService
+from .services import OpenRouterAudioService as OpenRouterAudioService
 from .services import PasswordManagerService as PasswordManagerService
 from .services import TextPreprocessingService as TextPreprocessingService
-from .services import WhisperSTTService as WhisperSTTService
+from .services import WhisperHFSTTService as WhisperHFSTTService
