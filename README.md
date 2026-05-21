@@ -1,90 +1,136 @@
-# Medical Documentation Assistant Backend
+# Lobanov — ассистент медицинской документации
 
-A backend system for semi-automatic generation of medical documents using audio input and an NLP pipeline.
+Веб-приложение для полуавтоматического оформления медицинских документов: врач записывает или загружает аудио консультации, система транскрибирует речь, извлекает клинические факты и заполняет шаблон документа с возможностью проверки и экспорта.
 
-## Features
+**Стек:** FastAPI + PostgreSQL (backend), React + Vite (frontend).
 
-- Audio upload and transcription using OpenAI Whisper
-- Clinical fact extraction from transcripts
-- Template-based document generation
-- Draft review and verification with traceability
-- RESTful API built with FastAPI
-- Clean/Hexagonal architecture
+## Возможности
 
-## Project Structure
+- Сессии документирования и загрузка аудио
+- Распознавание речи (Whisper / OpenRouter)
+- Извлечение клинических фактов (Qwen / OpenRouter)
+- Заполнение шаблонов, валидация и подтверждение полей
+- Экспорт документов (PDF)
+- JWT-аутентификация
+
+## Структура проекта
 
 ```
-lobanov/
-├── app/              # Application layer (FastAPI app, routers)
-├── domain/           # Domain layer (entities, value objects, domain services)
-├── infra/            # Infrastructure layer (database, config, adapters)
-├── protocols/        # Protocols
-├── usecases/         # Use cases (application services)
-├── utils/            # Utilities (logging, helpers)
-├── adapters/         # Adapters - protocol implementations
-└── pyproject.toml    # Project dependencies
+.
+├── lobanov/              # Backend (Clean/Hexagonal architecture)
+│   ├── app/              # FastAPI, роутеры
+│   ├── domain/           # Сущности
+│   ├── usecases/         # Сценарии использования
+│   ├── adapters/         # Реализации репозиториев и сервисов
+│   └── infra/            # Конфиг, БД
+├── frontend/             # React SPA (TanStack Router, shadcn/ui)
+├── alembic/              # Миграции БД
+├── experiments/          # Бенчмарки STT/NLP (не нужны для запуска)
+├── docker-compose.yml
+├── config.toml.example   # Пример конфигурации backend
+├── pyproject.toml        # Python-зависимости (uv)
+└── uv.lock
 ```
 
-## Setup
+## Требования
 
-### Prerequisites
+| Компонент | Версия / примечание |
+|-----------|---------------------|
+| Python | 3.12 |
+| [uv](https://docs.astral.sh/uv/) | менеджер зависимостей и venv |
+| Node.js | 22+ (для frontend) |
+| PostgreSQL | 17 (локально или через Docker) |
+| **ffmpeg** | **обязателен** — конвертация аудио (mp3, m4a, ogg и др.) |
+| Docker | опционально, для БД или полного стека |
 
-- Python 3.12
-- PostgreSQL database
-- uv (package manager)
+**ffmpeg** должен быть в `PATH`. Без него загрузка не-mp3 файлов и часть STT-провайдеров не работают.
 
-### Installation
+- Windows: `winget install Gyan.FFmpeg` или [ffmpeg.org](https://ffmpeg.org/download.html)
+- Linux: `sudo apt install ffmpeg`
+- macOS: `brew install ffmpeg`
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd lobanov
-```
+Для локального Whisper на GPU нужен CUDA; для NLP — API-ключ OpenAI (или `use_mock = true` в конфиге).
 
-2. Install dependencies using uv:
-```bash
-uv venv
-.venv/bin/activate
-uv sync
-```
+## Конфигурация
 
-3. Copy the example environment file:
 ```bash
 cp .env.example .env
+cp config.toml.example config.toml
 ```
 
-4. Configure your environment variables in `.env`:
-- Set up your database connection string
-- Configure JWT secret key
-- Set up API keys for external services (OpenAI, etc.)
+**`.env`** — учётные данные PostgreSQL для Docker (`PG_APP_*`, `PG_ADM_*`).
 
-5. Run the application:
+**`config.toml`** — основные настройки backend. При запуске БД через Docker укажите:
+
+
+Ключи STT/NLP, JWT secret и пути хранилища — в `config.toml`. Переменные окружения с префиксом `LOBANOV__` переопределяют значения из TOML.
+
+## Запуск
+
+### Вариант 1 — гибридный (рекомендуется для разработки)
+
+БД в Docker, backend и frontend локально.
+
+**1. PostgreSQL**
+
 ```bash
+docker compose up lobanov_postgres -d
+```
+
+**2. Backend**
+
+```bash
+uv venv
+# Windows:
+.venv\Scripts\activate
+# Linux/macOS:
+# source .venv/bin/activate
+
+uv sync
+alembic upgrade head
 uv run python -m lobanov.app
 ```
 
-The API will be available at `http://localhost:8000`
+API: http://localhost:8000 · Swagger: http://localhost:8000/docs
 
-## API Documentation
-
-When running in development mode, API documentation is available at:
-- Swagger UI: `http://localhost:8000/docs`
-
-## Development
-
-### Code Formatting
+**3. Frontend**
 
 ```bash
-uv run ruff format
-uv run ruff check
+cd frontend
+npm install
+cp .env.example .env
+npm run dev
 ```
 
-### Type Checking
+UI: http://localhost:5173 (Vite проксирует `/api` на backend).
+
+### Вариант 2 — Docker
 
 ```bash
+cp config.toml.example config.docker.toml
+```
+
+```bash
+docker compose up --build
+```
+
+| Сервис | URL |
+|--------|-----|
+| Frontend | http://localhost:8080 |
+| Backend API | http://localhost:8000 |
+| PostgreSQL | localhost:5432 |
+
+
+## Разработка
+
+```bash
+# Форматирование и линт (backend)
+uv run ruff format
+uv run ruff check
+
 uv run mypy . --install-types --non-interactive --ignore-missing-imports --check-untyped-defs --disable-error-code var-annotated --disable-error-code import-untyped --disable-error-code type-abstract     
 ```
 
-## License
+## Лицензия
 
-See LICENSE file for details.
+См. файл LICENSE.
